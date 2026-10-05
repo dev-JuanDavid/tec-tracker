@@ -1,0 +1,187 @@
+﻿@model IEnumerable<Queue.ViewModels.UserListViewModel>
+
+@{
+    ViewBag.Title = "Usuarios";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Guardamos la company en un input hidden -->
+<input type="hidden" id="companyValue" value="@Session["Company"]" />
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.tailwindcss.min.css" />
+
+<div class="flex flex-col space-y-4">
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-semibold text-gray-800">Gestión de Usuarios</h2>
+        <div class="flex space-x-2">
+            <a href="@Url.Action("Create", "User")"
+               class="btn_create flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
+                <i class="fa fa-plus mr-2"></i> Crear Usuario
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <table id="myTable" class="min-w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-600">
+                <tr>
+
+                    <th class="px-4 py-2 font-medium">Nombre</th>
+                    <th class="px-4 py-2 font-medium">Correo</th>
+                    <th class="px-4 py-2 font-medium">Rol</th>
+                    <th class="px-4 py-2 font-medium">Estado</th>
+                    <th class="px-4 py-2 font-medium text-center">Editar</th>
+                    <th class="px-4 py-2 font-medium text-center">Eliminar</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach (var item in Model)
+                {
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Email)</td>
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.LastName)</td>
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Email)</td>
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Role)</td>
+                        <td class="px-4 py-2">
+                            @if (item.IsLoged == true)
+                            {
+                                <span class="text-green-600 font-medium">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="text-red-600 font-medium">Inactivo</span>
+                            }
+                        </td>
+
+                        <!-- Editar -->
+                        <td style="text-align:center">
+                            <a class="px-3 py-1 border rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-100 transition btn-edit"
+                               href="@Url.Action("Edit", "User", new { id = item.Id })">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                        </td>
+
+                        <!-- Eliminar -->
+                        <td style="text-align:center">
+                            <a class="px-3 py-1 border rounded-lg text-red-600 border-red-300 hover:bg-red-100 transition btn-delete"
+                               href="@Url.Action("Delete", "User", new { id = item.Id })">
+                                <i class="fa fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal dinámico Delete -->
+<div id="deleteModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-[32rem] max-h-[90vh] overflow-y-auto">
+        <div id="deleteModalContent"></div>
+    </div>
+</div>
+
+<!-- Modal dinámico Edit -->
+<div id="editModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-[40rem] max-h-[90vh] overflow-y-auto">
+        <div id="editModalContent"></div>
+    </div>
+</div>
+
+<!-- Modal dinámico Create -->
+<div id="createModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-[40rem] max-h-[90vh] overflow-y-auto">
+        <div id="createModalContent"></div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // DataTable config
+            var table = $('#myTable').DataTable({
+                pageLength: 15,
+                lengthMenu: [[15, 25, 50, -1], [15, 25, 50, "Todos"]],
+                dom:
+                    "<'flex items-center justify-between mb-4'<'flex items-center'l><'flex items-center'f>>" +
+                    "rt" +
+                    "<'flex items-center justify-between mt-4'<'text-sm'i><'pagination'p>>",
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Buscar...",
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                    paginate: {
+                        first: "<<",
+                        last: ">>",
+                        next: ">",
+                        previous: "<"
+                    }
+                }
+            });
+        });
+
+        // Modal Delete
+        $(document).on('click', '.btn-delete', function (e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+
+            $("#deleteModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
+            $("#deleteModal").removeClass("hidden");
+
+            $.get(url, function (data) {
+                $("#deleteModalContent").html(data);
+            });
+        });
+
+        function closeDeleteModal() {
+            $("#deleteModal").addClass("hidden");
+            $("#deleteModalContent").html("");
+        }
+
+        // Modal Edit
+        $(document).on('click', '.btn-edit', function (e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+
+            $("#editModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
+            $("#editModal").removeClass("hidden");
+
+            $.get(url, function (data) {
+                $("#editModalContent").html(data);
+            });
+        });
+
+        function closeEditModal() {
+            $("#editModal").addClass("hidden");
+            $("#editModalContent").html("");
+        }
+
+        // Modal Create
+        $(document).on('click', '.btn_create', function (e) {
+            e.preventDefault();
+            var url = $(this).attr('href');
+            var company = $("#companyValue").val();
+
+            $("#createModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
+            $("#createModal").removeClass("hidden");
+
+            $.get(url, { company: company }, function (data) {
+                $("#createModalContent").html(data);
+            });
+        });
+
+        function closeCreateModal() {
+            $("#createModal").addClass("hidden");
+            $("#createModalContent").html("");
+        }
+    </script>
+}

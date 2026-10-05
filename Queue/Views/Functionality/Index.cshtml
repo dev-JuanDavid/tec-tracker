@@ -1,0 +1,117 @@
+﻿@model IEnumerable<Queue.Models.Functionality>
+
+@{
+    ViewBag.Title = "Functionalities";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="box-header with-border">
+                <h4 class="box-title">Functionalities</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2">
+
+                        <a href="@Url.Action("Index", "Agent_Empresa", new {idEmpresa=ViewBag.IdCompany})" class="btn btn-info btn-block m-t-10 float-right">
+                            <i class="glyphicon glyphicon-chevron-left"></i> Back
+                        </a>
+                        <br />
+                        <br />
+                        <br />
+                        <div class="col-md-10">
+                        </div>
+                 
+                    </div>
+                </div>
+                   
+                    <div class="row">
+                        <div class="col-md-10">
+                        </div>
+                        <br />
+                        <br />
+                        <br />
+
+                        <div class="col-md-2">
+                            <a href="@Url.Action("Create", "Functionality", new {idCompany=ViewBag.IdCompany})" class="btn btn-info btn-sm m-t-10 float-right">
+                                <i class="fa fa-plus"></i> New Functionality
+                            </a>
+                        </div>
+
+                    </div>
+
+                <div class="table-responsive">
+                    <table id="myTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.Name)
+                                </th>
+                                <th>
+                                    @Html.DisplayNameFor(model => model.Active)
+                                </th>
+                                @*<th>
+                                    Edit
+                                </th>
+                                <th>
+                                    Details
+                                </th>*@
+                                <th>
+                                    Delete
+                                </th>
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td style="text-align:center">
+                                        @Html.DisplayFor(modelItem => item.Name)
+                                    </td>
+                                    <td>
+                                    @if (item.Active == true)
+                                        {
+                                        <label style="text-align: center">Active</label>
+
+                                        } else
+                                        {
+                                            <label style="text-align:center">Inactive</label>
+                                        }
+                                   </td>
+                                    
+                                    @*<td style="text-align:center">
+                                        <a class="btn btn-outline-secondary" href="@Url.Action("Edit", "Functionality")"><i class="fa fa-edit"></i></a>
+                                    </td>
+                                    <td style="text-align:center">
+                                        <a class="btn btn-outline-secondary" href="@Url.Action("Details", "Functionality")"><i class="fa fa-laptop"></i></a>
+                                    </td>*@
+                                    <td style="text-align:center">
+                                        <a class="btn btn-outline-secondary" href="@Url.Action("Delete", "Functionality", new {idCompany=ViewBag.IdCompany, idFunctionality=item.IdFunctionality})"><i class="fa fa-trash"></i></a>
+                                    </td>
+                                    
+                                </tr>
+                            }
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
+    <script>
+        $('#myTable').DataTable();
+    </script>
+}

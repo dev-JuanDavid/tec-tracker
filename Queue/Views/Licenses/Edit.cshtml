@@ -1,0 +1,63 @@
+﻿@model Queue.Models.License
+
+@{
+    ViewBag.Title = "Edit";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+
+
+@using (Html.BeginForm("Edit", "Licenses", FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+    @Html.HiddenFor(model => model.IdLicense)
+
+    <div id="divblock" class="row">
+        <div class="col-lg-12 col-12">
+
+            <div class="box">
+                <div class="box-header with-border">
+                    <h4 class="box-title">Editar Licencia</h4>
+                </div>
+                <div class="col-md-2">
+
+                    <a href="@Url.Action("Index", "Licenses", new {idempresa=Model.Agent_Empresa.IdCompany})" class="btn btn-info btn-block m-t-10 float-right">
+                        <i class="glyphicon glyphicon-chevron-left"></i> Back
+                    </a>
+                </div>
+
+                <div class="box-body">
+
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-3">
+                                @Html.LabelFor(model => model.enddate, htmlAttributes: new { @class = "control-label" })
+                                @Html.ValidationMessageFor(model => model.enddate, "", new { @class = "text-danger" })
+                                <div class="input-group">
+                                    @Html.EditorFor(model => model.enddate, new { htmlAttributes = new { @class = "form-control required", @type = "Date" } })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <div class="d-flex flex-row-reverse">
+                        <div class="p-2">
+                            <button id="add_company" name="add_dictionary" type="submit" value="Create" class="btn btn-info waves-effect waves-light btn-block">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+<script src="~/Scripts/jquery-3.4.1.min.js"></script>
+<script>
+    $(document).ready(function () {
+
+    });
+</script>

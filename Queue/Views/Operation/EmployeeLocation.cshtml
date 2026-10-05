@@ -1,0 +1,67 @@
+﻿@using System.Configuration
+
+@section Scripts {
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=@ConfigurationManager.AppSettings["Google:api-Key"]&callback=initMap" defer></script>
+
+    <script type="text/javascript">
+
+        let _employeeId = "",
+            _location = @Html.Raw(Json.Encode(ViewBag.users)),
+            _userLocation = _location,
+            _center = @ConfigurationManager.AppSettings["Google:InitialMapCoordinate"];
+
+        $("#filter").click(() => { getEmployeeLocationById() });
+        $("#ListItem").on("change", function () {
+            switch ($(this).children("option:selected").text()) {
+                case 'Todos':
+                    location.reload();
+                    //$(".dv-date").addClass("d-none");
+                    //initMap()
+                    return;
+            }
+            _employeeId = this.value;
+            $(".dv-date").removeClass("d-none");
+        })
+
+        function initMap() {
+
+            let map = new google.maps.Map(document.getElementById('map'), {
+                center: _center,
+                zoom: 7,
+            });
+
+            _userLocation.forEach((prop) => {
+                var marker = new google.maps.Marker({
+                    position: { lat: prop.Latitude, lng: prop.Longitude },
+                    map: map,
+                    label: prop.Username,
+                    title: `${prop.Username} ip:${prop.Ip} fecha: ${prop.Date === null ? "" : moment(prop.Date).format('YYYY-MM-DD') }`,
+                    draggable: true,
+                    animation: google.maps.Animation.DROP,
+                });
+            })
+
+            setTimeout(function () {
+                $("#map").removeAttr('style');
+            }, 1000);
+
+        }
+
+        function getEmployeeLocationById() {
+
+            $.ajax({
+                url: `@Url.Action("EmployeeLocationById", "Operation")?userId=${_employeeId}&startDate=${$("#StartDate").val()}&endDate=${$("#EndDate").val()}`,
+                dataType: 'JSON',
+                type: 'GET',
+                contentType: "application/json; charset=utf-8",
+            }).done((data) => {
+                _userLocation = data;
+                initMap();
+            }).fail((jqXHR) => {
+                console.log(jqXHR);
+            });
+        }
+
+    </script>
+}

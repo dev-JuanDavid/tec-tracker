@@ -1,0 +1,231 @@
+﻿@model Queue.Models.Agent_EmployeeUsbConfig
+
+@{
+    ViewBag.Title = "UsbEdit";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@using (Html.BeginForm("UsbEdit", "Agent_Employee", FormMethod.Post, new { id = "frm_register" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.idEmployee)
+
+    <div id="divblock" class="row">
+        <div class="col-lg-12 col-12">
+            <div class="box">
+                <div class="box-header with-border">
+                    <h4 class="box-title">Controlar el Uso de Puertos Usb</h4>
+                </div>
+                <div class="col-md-2">
+                    <a href="@Url.Action("Index", "Agent_Employee")" class="btn btn-info btn-block m-t-10 float-right">
+                        <i></i> Volver
+                    </a>
+                </div>
+
+                <div class="box-header with-border">
+                    <h4>@ViewBag.EmployeeName</h4>
+                </div>
+
+                <div class="col-lg-12">
+                    @if (Model != null)
+                    {
+                        <i class="glyphicon glyphicon-certificate"></i>
+                        <label class="control-label">Puertos USB</label>
+                        //@Html.LabelFor(model => model.Agent_EmployeeUsb, htmlAttributes: new { @class = "control-label" })
+                        <div class="table-responsive">
+                            <table id="myTableUsb" class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:center">Descripción</th>
+                                        <th style="text-align:center">PortId</th>
+                                        <th style="text-align:center">Fecha Actualización</th>
+                                        <th style="text-align:center">Deactivate</th>
+                                    </tr>
+                                </thead>
+
+                                <div class="form-group">
+                                    <label for="Disk">Deshabilitar el uso de dispositivos de almacenamiento externo (Discos)</label>
+                                    @Html.CheckBoxFor(model => model.IsDisk, new { @class = "check-sci" })
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="UsbConfig">Deshabilitar el uso de dispositivos de almacenamiento externo (Usb)</label>
+                                    @Html.CheckBoxFor(model => model.IsDisabled, new { @class = "check-sci" })
+                                </div>
+
+                                <tbody>
+                                    @for (int i = 0; i < Model.Agent_EmployeeUsb.Count; i++)
+                                    {
+                                        var isExternalStorage = Model.Agent_EmployeeUsb[i].Description.ToLower().Contains("almacenamiento"); // Verifica si es almacenamiento externo
+                                        var isDisk = Model.Agent_EmployeeUsb[i].PortId.StartsWith("\\\\.\\PHYSICALDRIVE"); // Verifica si el PortId indica un disco físico
+
+                                        <tr>
+                                            <td style="text-align:center">
+                                                @Html.HiddenFor(modelItem => Model.Agent_EmployeeUsb[i].EmployeeUsbId)
+                                                @Html.HiddenFor(modelItem => Model.Agent_EmployeeUsb[i].Description)
+                                                @Html.HiddenFor(modelItem => Model.Agent_EmployeeUsb[i].PortId)
+                                                @Html.HiddenFor(modelItem => Model.Agent_EmployeeUsb[i].idEmployee)
+                                                @Html.DisplayFor(modelItem => Model.Agent_EmployeeUsb[i].Description)
+                                            </td>
+                                            <td style="text-align:center">
+                                                @Model.Agent_EmployeeUsb[i].PortId
+                                            </td>
+                                            <td style="text-align:center">
+                                                @Html.HiddenFor(modelItem => Model.Agent_EmployeeUsb[i].Date)
+                                                @Html.DisplayFor(modelItem => Model.Agent_EmployeeUsb[i].Date)
+                                            </td>
+                                            <td style="text-align:center">
+                                                @if (isExternalStorage || isDisk)
+                                                {
+                                                    <!-- Si es almacenamiento externo, el checkbox está deshabilitado -->
+                                                    @Html.CheckBoxFor(modelItem => Model.Agent_EmployeeUsb[i].Status, new { @class = "check-sci", @disabled = "disabled" })
+                                                }
+                                                else
+                                                {
+                                                    <!-- Si no es almacenamiento externo, el checkbox es editable -->
+                                                    @Html.CheckBoxFor(modelItem => Model.Agent_EmployeeUsb[i].Status, new { @class = "check-sci" })
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+
+                            </table>
+                        </div>
+                    }
+                    <br />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box-header with-border">
+        <div class="row">
+            
+            <div class="col-md-4">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Concentrador raíz USB (USB 3.0):</h4>
+                        <p>
+                            Esta opción desactiva todos los puertos USB y Bluetooth, bloqueando dispositivos de almacenamiento (USB),
+                            periféricos como teclados y ratones con cable, así como audífonos o periféricos que usan Bluetooth. Debe
+                            activarse junto con la opción "Dispositivo compuesto USB" para asegurar su correcta funcionalidad.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Dispositivo compuesto USB:</h4>
+                        <p>
+                            Deshabilita dispositivos conectados por cable, como teclados y ratones. Pueden aparecer varios "Dispositivos
+                            compuestos USB" en la lista, ya que cada uno representa un dispositivo detectado. Se recomienda deshabilitar
+                            todos para asegurar el bloqueo completo.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Deshabilitar el uso de dispositivos de almacenamiento externo (USB):</h4>
+                        <p>
+                            Esta opción bloquea la conexión unidades USB que contengan información o programas. Funciona en
+                            conjunto con la opción "Dispositivo de almacenamiento USB".
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Dispositivo de almacenamiento USB:</h4>
+                        <p>
+                            Esta opción muestra el estado de los dispositivos de almacenamiento externo. Al insertar un USB, podrás
+                            verificar su estado en el perfil del usuario, donde se indicará si está bloqueado o no mediante un recuadro
+                            de estado.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Estado del recuadro:</h4>
+                        <p>
+                            Si el recuadro está vacío (sin marcar), significa que el puerto USB está activo y permite la conexión de dispositivos.
+                            Si el recuadro tiene un check (marcado), el puerto está desactivado, bloqueando el uso de dispositivos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Deshabilitar el uso de dispositivos de almacenamiento externo (Discos):</h4>
+                        <p>
+                            Esta opción bloquea la conexión de discos externos que contengan información o programas.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fila Inferior: 2 recuadros ejemplo -->
+        @*<div class="row">
+            <div class="col-md-6">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Dispositivo de almacenamiento USB:</h4>
+                        <p>
+                            Esta opción muestra el estado de los dispositivos de almacenamiento externo. Al insertar un USB, podrás
+                            verificar su estado en el perfil del usuario, donde se indicará si está bloqueado o no mediante un recuadro
+                            de estado.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="box">
+                    <div class="box-header with-border">
+                        <h4>Estado del recuadro:</h4>
+                        <p>
+                            Si el recuadro está vacío (sin marcar), significa que el puerto USB está activo y permite la conexión de dispositivos.
+                            Si el recuadro tiene un check (marcado), el puerto está desactivado, bloqueando el uso de dispositivos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>*@
+    </div>
+
+        <div class="form-actions">
+            <div class="d-flex flex-row-reverse">
+                <div class="p-2">
+                    <button id="edit" name="add_dictionary" type="submit" value="Create" class="btn btn-warning waves-effect waves-light btn-block">
+                        Edit
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="~/Scripts/jquery-3.4.1.min.js"></script>
+        <script>
+        $(document).ready(function () {
+            var status = '@ViewBag.status';
+            if (status == "False") {
+                $("#string_status").val("Inactive");
+            }
+        });
+        </script>
+        }

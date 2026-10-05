@@ -1,0 +1,68 @@
+﻿@if (Context.Request.Url.AbsolutePath.ToLower() == "/operation/employeelocation")
+{
+    <div class="row sci_rw-filter-google">
+        <div class="col-lg-3">
+            <label>Empleados</label>
+            <div class="input-group">
+                @Html.DropDownList("ListItem", null, htmlAttributes: new { @class = "form-control", autocomplete = "off" })
+            </div>
+        </div>
+        <div class="dv-date col-lg-3 d-none">
+            <div class="form-group">
+                <label>Fecha Desde</label>
+                <div class="input-group">
+                    <input id="StartDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+        </div>
+        <div class="dv-date col-lg-3 d-none">
+            <div class="form-group">
+                <label>Fecha Hasta</label>
+                <div class="input-group">
+                    <input id="EndDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+        </div>
+        <div class="dv-date col-lg-2 d-none">
+            <div class="d-flex flex-row-reverse">
+                <button id="filter" name="filter" class="btn btn-info waves-effect waves-light btn-block mt-4">
+                    Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>Fecha Desde</label>
+                <div class="input-group">
+                    <input id="StartDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="form-group">
+                <label>Fecha Hasta</label>
+                <div class="input-group">
+                    <input id="EndDate" class="form-control" type="date" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <label>Empleados</label>
+            <div class="input-group">
+                @Html.DropDownList("user", null, htmlAttributes: new { @class = "form-control", autocomplete = "off" })
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="d-flex flex-row-reverse">
+                <button id="filter" name="filter" class="btn btn-info waves-effect waves-light btn-block mt-4">
+                    Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+}

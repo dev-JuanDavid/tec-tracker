@@ -1,0 +1,427 @@
+﻿@{
+    ViewBag.Title = "Reporte de Actividades";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<div class="container mx-auto p-6 space-y-6">
+
+    <!-- Filtros -->
+    <!-- Filtros -->
+    <div class="bg-white shadow-md rounded-2xl p-6 space-y-6">
+        <h4 class="text-xl font-semibold text-gray-700 border-b pb-2">Filtros</h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Fecha -->
+            <div class="flex flex-col">
+                <label for="DateFrom" class="text-sm font-medium text-gray-600 mb-1">Fecha</label>
+                <input id="DateFrom" type="date"
+                       value="@DateTime.Now.ToString("yyyy-MM-dd")"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            </div>
+
+            <!-- Intervalos -->
+            <div class="flex flex-col">
+                <label class="text-sm font-medium text-gray-600 mb-1">Mostrar Intervalos</label>
+                @Html.DropDownList("ddlPeriods", new List<SelectListItem>
+                {
+                    new SelectListItem() { Text = "5 Minutos", Value = "5", Selected = true },
+                    new SelectListItem() { Text = "10 Minutos", Value = "10" },
+                    new SelectListItem() { Text = "30 Minutos", Value = "30" },
+                    new SelectListItem() { Text = "45 Minutos", Value = "45" },
+                    new SelectListItem() { Text = "Una hora", Value = "60" },
+                    new SelectListItem() { Text = "Dos horas", Value = "120" }
+                }, "", new { @class = "w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none" })
+            </div>
+
+            <!-- Grupos -->
+            <div class="flex flex-col">
+                <label class="text-sm font-medium text-gray-600 mb-1">Grupos</label>
+                @Html.DropDownList("idgruoup", null, htmlAttributes: new { @class = "w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none" })
+            </div>
+
+            <!-- Empleados -->
+            <div class="flex flex-col">
+                <label class="text-sm font-medium text-gray-600 mb-1">Empleados</label>
+                <div id="userList" class="flex flex-wrap gap-2"></div>
+            </div>
+
+
+        </div>
+
+        <!-- Botón -->
+        <div class="pt-4">
+            <button id="btnProcesarConsulta"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-200">
+                Buscar
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Clasificación colores -->
+    <!-- Contenedor de usuarios -->
+
+    <div class="bg-white shadow-md rounded-xl p-4 mb-4">
+        <div id="chartEmptyMessage" class="text-center text-gray-500 py-3">Selecciona un usuario para ver su línea de tiempo</div>
+        <h4 class="text-lg font-semibold mb-2">Usuarios</h4>
+        <div id="userList"
+             class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border rounded">
+            <!-- Chips de usuarios se llenan dinámicamente -->
+        </div>
+
+
+        <h4 class="text-xl font-semibold mb-4">Clasificación</h4>
+        <div class="grid grid-cols-4 gap-4 text-center">
+            <div class="p-2 rounded-lg bg-[#55cbcd] text-white font-semibold">Productivas</div>
+            <div class="p-2 rounded-lg bg-[#ff968a] text-white font-semibold">Improductivas</div>
+            <div class="p-2 rounded-lg bg-[#96b3c2] text-white font-semibold">Neutrales</div>
+            <div class="p-2 rounded-lg bg-[#445a67] text-white font-semibold">Inactivo</div>
+        </div>
+
+        <!-- Contenedor de la gráfica -->
+
+        <h4 class="text-xl font-semibold mb-4">Aplicaciones por Usuario</h4>
+        <p id="divWait" class="hidden text-blue-600 mb-2"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>
+        <div id="sin_Data" class="hidden text-red-600 font-semibold mb-2">Sin registros! No hay datos disponibles</div>
+
+        <!-- Contenedor fijo con scroll -->
+
+        <div id="chartContainer" class="relative border rounded ranking-scroll" style="height:550px">
+            <div id="chart" class="w-full h-full"></div>
+        </div>
+
+
+    </div>
+
+</div>
+<!-- 🔹 CSS scroll estilizado -->
+<style>
+    .ranking-scroll {
+        max-height:550px; /* controlamos altura del scroll */
+        overflow-y: auto;
+        padding-right: 8px; /* espacio para el scrollbar */
+    }
+
+        /* Scroll personalizado (Webkit: Chrome, Edge, Safari) */
+        .ranking-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ranking-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .ranking-scroll::-webkit-scrollbar-thumb {
+            background: #9ca3af; /* gris Tailwind gray-400 */
+            border-radius: 4px;
+        }
+
+            .ranking-scroll::-webkit-scrollbar-thumb:hover {
+                background: #6b7280; /* gris más oscuro gray-600 */
+            }
+
+    /* Firefox */
+    .ranking-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #9ca3af #f1f1f1;
+    }
+</style>
+<script>
+
+    const PER_ROW_PX = 30;
+    var globalData = [];
+    var chart = null;
+
+    $(document).ready(function () {
+        $('.select2').select2({ theme: "classic" });
+
+        // Bind del botón Buscar
+        $("#btnProcesarConsulta").off("click").on("click", function (e) {
+            e.preventDefault();
+            ReportGantt();
+        });
+
+        // Opcional: si quieres precargar datos al abrir la página, descomenta:
+        ReportGantt();
+    });
+
+    function ReportGantt() {
+        var params = {
+            dateFrom: $("#DateFrom").val(),
+            dateTo: $("#DateFrom").val(),
+            periods: $("#ddlPeriods").val(),
+            user: $("#ddlUsers").val(),
+            idgruoup: $("#idgruoup").val()
+        };
+
+        $("#divWait").removeClass("hidden");
+        $("#sin_Data").addClass("hidden");
+        $("#chartEmptyMessage").addClass("hidden");
+        $("#chart").empty();
+
+        $.ajax({
+            type: "POST",
+            url: '@Url.Action("NewChart", "ReportGantt")',
+            data: JSON.stringify(params),
+            contentType: "application/json; charset=utf-8",
+            success: function (data) {
+
+                if (!data || !data.length) {
+                    $("#sin_Data").removeClass("hidden");
+                    globalData = [];
+                    renderUserList([]);
+                    renderFilteredChart([]);
+                    return;
+                }
+
+                globalData = data;
+                drawChart(data);
+            },
+            error: function (err) {
+                console.error("Error al obtener datos:", err);
+                $("#sin_Data").removeClass("hidden");
+                globalData = [];
+                renderUserList([]);
+                renderFilteredChart([]);
+            },
+            complete: function () {
+                $("#divWait").addClass("hidden");
+            }
+        });
+    }
+
+    function drawChart(data) {
+        renderUserList(data);
+        renderFilteredChart([]);
+    }
+
+    function renderUserList(data) {
+        var $container = $("#userList");
+        $container.empty();
+
+        for (var i = 0; i < data.length; i++) {
+            var userData = data[i];
+            var displayName = userData.UserName || userData.userName || ("Usuario " + (i + 1));
+            var userId = "userChip_" + i;
+
+            // inner HTML del chip (SVG check + label)
+            var inner = '<svg class="chip-check hidden w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                        '<span class="chip-label">' + escapeHtml(displayName) + '</span>';
+
+            var $btn = $("<button>")
+                .attr("id", userId)
+                .attr("data-user", displayName)
+                .addClass("userChip flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700 hover:brightness-95 transition")
+                .html(inner);
+
+            $container.append($btn);
+        }
+
+        // Click handler: selección única (toggle si clicas mismo)
+        $(".userChip").off("click").on("click", function () {
+            var $this = $(this);
+            var wasActive = $this.hasClass("active");
+
+            // Resetear todos
+            $(".userChip")
+                .removeClass("active bg-blue-500 text-white")
+                .addClass("bg-gray-200 text-gray-700")
+                .find(".chip-check").addClass("hidden");
+
+            if (!wasActive) {
+                // Activar este
+                $this.addClass("active bg-blue-500 text-white")
+                     .removeClass("bg-gray-200 text-gray-700")
+                     .find(".chip-check").removeClass("hidden");
+
+                var sel = $this.attr("data-user");
+                filterChartByUserName(sel);
+            } else {
+                // estaba activo y se desactiva -> limpiar gráfica
+                renderFilteredChart([]);
+            }
+        });
+    }
+
+    function filterChartByUserName(userName) {
+        if (!globalData || !globalData.length) {
+            renderFilteredChart([]);
+            return;
+        }
+
+        // buscar coincidencia exacta (intenta varios campos)
+        var filtered = globalData.filter(function (u) {
+            return (u.UserName && u.UserName === userName) ||
+                   (u.userName && u.userName === userName) ||
+                   false;
+        });
+
+        if (!filtered.length) {
+            // intentamos contains por si hay sufijos/prefijos
+            filtered = globalData.filter(function (u) {
+                var n = (u.UserName || u.userName || "").toString();
+                return n.indexOf(userName) >= 0;
+            });
+        }
+
+        renderFilteredChart(filtered);
+    }
+
+    function renderFilteredChart(data) {
+        $("#sin_Data").addClass("hidden");
+
+        if (!data || !data.length) {
+            if (chart) {
+                try { chart.destroy(); } catch (e) { console.warn(e); }
+                chart = null;
+            }
+            $("#chart").empty();
+            $("#chartEmptyMessage").removeClass("hidden");
+            return;
+        }
+
+        $("#chartEmptyMessage").addClass("hidden");
+
+        var seriesData = [];
+        var totalRows = 0;
+
+        for (var i = 0; i < data.length; i++) {
+            var userData = data[i];
+            var userSeries = { name: userData.UserName || userData.userName, data: [] };
+
+            if (userData.ReportSytems && Array.isArray(userData.ReportSytems)) {
+                for (var j = 0; j < userData.ReportSytems.length; j++) {
+                    var app = userData.ReportSytems[j];
+                    var start = app.FocusTimeT ? new Date(app.FocusTimeT).getTime() : null;
+                    var end = app.DateEnd ? new Date(app.DateEnd).getTime() : null;
+                    if (start === null || end === null || isNaN(start) || isNaN(end)) continue;
+
+                    var label = (  (app.Application ) ).trim();
+
+                    // construir tooltip HTML
+                    var tip = '<div class="p-2 bg-white rounded shadow-lg text-sm">' +
+                              '<b>Usuario:</b> ' + escapeHtml(userData.UserName || userData.userName) + '<br/>' +
+                              '<b>App:</b> ' + escapeHtml(app.ApplicationT || app.Application || "") + '<br/>' +
+                              '<b>Duración:</b> ' + escapeHtml(app.MessageDuration || "") + '<br/>' +
+                              (app.URL ? ('<b>URL:</b> ' + escapeHtml(app.URL) + '<br/>') : '') +
+                              '<b>Desde:</b> ' + moment(app.FocusTimeT).format('LTS') + '<br/>' +
+                              '<b>Hasta:</b> ' + moment(app.DateEnd).format('LTS') +
+                              '</div>';
+
+                    userSeries.data.push({
+                        x: label,
+                        y: [start, end],
+                        fillColor: getColor(app.GetAppsImproClassifyMoreUse),
+                        tooltip: { custom: (function(html){ return function(){ return html; }; })(tip) }
+                    });
+
+                    totalRows++;
+                }
+            }
+
+            if (userSeries.data.length) seriesData.push(userSeries);
+        }
+
+        if (!seriesData.length) {
+            $("#sin_Data").removeClass("hidden");
+            $("#chart").empty();
+            return;
+        }
+
+        var chartHeight = Math.max(300, totalRows * PER_ROW_PX + 120);
+
+        if (chart) {
+            try { chart.destroy(); } catch (e) { console.warn(e); }
+            chart = null;
+        }
+
+
+        chart = new ApexCharts(document.querySelector("#chart"), {
+            chart: { type: 'rangeBar', height: '100%', toolbar: { show: true } },
+            plotOptions: {
+                bar: {
+                    horizontal: true,
+                    borderRadius: 6,
+                    barHeight: 20
+                }
+            },
+            xaxis: { type: 'datetime' },
+            yaxis: {
+                labels: {
+                    formatter: function (val) {
+                        val = String(val || "");
+                        return val.replace("Sin clasificar | ", "");
+                    }
+                }
+            },
+            tooltip: {
+                custom: function (opts) {
+                    try {
+                        return opts.w.config.series[opts.seriesIndex].data[opts.dataPointIndex].tooltip.custom();
+                    } catch (e) {
+                        return "";
+                    }
+                }
+            },
+            series: seriesData
+        });
+
+
+        chart.render();
+    }
+
+    function getColor(type) {
+        switch (String(type)) {
+            case "1":
+            case "Productivo": return "#55cbcd";
+            case "2":
+            case "Improductivo": return "#ff968a";
+            case "0":
+            case "Neutro": return "#8FA2AD";
+            case "3":
+            case "Inactivo": return "#445a67";
+            default: return "#000000";
+        }
+    }
+
+    function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return "";
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    /* -------------------------
+       MOCK DATA (opcional para pruebas locales)
+       Si quieres probar sin backend: descomenta la línea drawChart(mockData);
+    -------------------------- */
+    /*
+    var mockData = [
+        {
+            UserName: "Juan Perez",
+            ReportSytems: [
+                { AppImproName: "Office", Application: "Word", FocusTimeT: "2025-09-04T08:00:00", DateEnd: "2025-09-04T08:20:00", GetAppsImproClassifyMoreUse: "1", ApplicationT: "Word", MessageDuration: "20m", URL: "" },
+                { AppImproName: "Navegador", Application: "Chrome", FocusTimeT: "2025-09-04T09:00:00", DateEnd: "2025-09-04T09:10:00", GetAppsImproClassifyMoreUse: "2", ApplicationT: "Chrome", MessageDuration: "10m", URL: "https://example.com" }
+            ]
+        },
+        {
+            UserName: "María Gómez",
+            ReportSytems: [
+                { AppImproName: "IDE", Application: "VSCode", FocusTimeT: "2025-09-04T08:30:00", DateEnd: "2025-09-04T09:00:00", GetAppsImproClassifyMoreUse: "1", ApplicationT: "VSCode", MessageDuration: "30m", URL: "" }
+            ]
+        }
+    ];
+    // drawChart(mockData);
+    */
+</script>

@@ -1,0 +1,285 @@
+﻿@{
+    Layout = null;
+    var username = (Session["Name"] != null && !string.IsNullOrEmpty(Session["Name"].ToString())) ? Session["Name"].ToString() : "Usuario";
+    var useremail = (Session["Email"] != null) ? Session["Email"].ToString() : "";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewBag.Title - TEC Tracker</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Icons: FontAwesome + MDI (mantengo MDI por tu sidebar; puedes quitar uno luego) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/mdi/css/materialdesignicons.min.css" rel="stylesheet" />
+</head>
+<body class="flex h-screen bg-gray-100">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-gradient-to-b from-indigo-500 to-indigo-500 text-white flex flex-col">
+        <!-- Logo -->
+        <div class="h-40 flex items-center justify-center border-b border-white/30">
+            <img src="~/TemplateAssets/assets/images/Logo blanco.png" alt="Logo" class="h-20 " />
+        </div>
+
+        <!-- Menu -->
+        <nav class="flex-1 overflow-y-auto">
+            <ul class="space-y-1 p-2">
+                <li>
+                    <a href="@Url.Action("Index", "Home")"
+                       class="flex items-center p-2 rounded-md hover:bg-gray-700">
+                        <i class="mdi mdi-home text-xl mr-3"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                @if (User.IsInRole("Admin") || User.IsInRole("SAdmin"))
+                {
+                    <li>
+                        <button class="w-full flex items-center justify-between p-2 rounded-md hover:bg-gray-700"
+                                onclick="toggleMenu('adminMenu')" aria-expanded="false">
+                            <span class="flex items-center">
+                                <i class="mdi mdi-apps text-xl mr-3"></i>
+                                Administración
+                            </span>
+                            <i class="mdi mdi-chevron-down transition-transform" id="adminMenuIcon"></i>
+                        </button>
+                        <ul id="adminMenu" class="hidden pl-6 space-y-1" role="menu">
+                            <li><a href="@Url.Action("UserList", "Manage")" class="block p-2 hover:bg-gray-700 rounded">Usuarios</a></li>
+                            <li><a href="@Url.Action("Index", "Agent_Employee")" class="block p-2 hover:bg-gray-700 rounded">Empleados</a></li>
+                            <li><a href="@Url.Action("Index", "Agent_Job")" class="block p-2 hover:bg-gray-700 rounded">Cargos</a></li>
+                            <li><a href="@Url.Action("Index", "Agent_EmployeesGroups")" class="block p-2 hover:bg-gray-700 rounded">Grupos Usuarios</a></li>
+                            <li><a href="@Url.Action("Index", "Agent_ProgramClasification")" class="block p-2 hover:bg-gray-700 rounded">Clasificación Programas</a></li>
+                            @*<li><a href="@Url.Action("ParameterSystem", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Parámetros del sistema</a></li>*@
+                            <li><a href="@Url.Action("NotificacionUsuarioReport", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Parámetros del sistema</a></li>
+                        </ul>
+                    </li>
+                }
+
+                <li>
+                    <button class="w-full flex items-center justify-between p-2 rounded-md hover:bg-gray-700"
+                            onclick="toggleMenu('reportMenu')" aria-expanded="false">
+                        <span class="flex items-center">
+                            <i class="mdi mdi-chart-bar text-xl mr-3"></i>
+                            Informes
+                        </span>
+                        <i class="mdi mdi-chevron-down transition-transform" id="reportMenuIcon"></i>
+                    </button>
+                    <ul id="reportMenu" class="hidden pl-6 space-y-1" role="menu">
+                        <li><a href="@Url.Action("Index", "ReportGantt")" class="block p-2 hover:bg-gray-700 rounded">Reporte Actividades</a></li>
+                        <li><a href="@Url.Action("TimePerActivity", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Sumado Actividades</a></li>
+                        <li><a href="@Url.Action("SoftwareReport", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Reporte Software</a></li>
+                        <li><a href="@Url.Action("HardwareReport", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Reporte Hardware</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Extra links -->
+        <div class="border-t border-white/20 mt-4 p-4 space-y-2">
+            <a href="#" class="flex items-center p-2 rounded-md hover:bg-white/10 transition">
+                <i class="mdi mdi-help-circle-outline text-lg mr-3"></i> Ayuda
+            </a>
+            <a href="#" class="flex items-center p-2 rounded-md hover:bg-white/10 transition">
+                <i class="mdi mdi-book-open-outline text-lg mr-3"></i> Manual
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-col">
+        <!-- Header -->
+        <header id="headder" class="bg-white text-gray-800 h-16 px-4 flex items-center justify-between shadow-md z-30 border-b border-gray-200">
+            <!-- Sección izquierda: menú + título -->
+            <div class="flex items-center space-x-4">
+                <!-- Toggle sidebar (visible en todas las resoluciones ahora) -->
+                <button type="button" id="sidebar-toggle" onclick="toggleSidebar(this)" aria-expanded="true"
+                        class="text-gray-600 text-2xl p-2 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fa fa-bars"></i>
+                </button>
+
+                <!-- Nombre de la página -->
+                <div class="text-lg font-semibold text-gray-800">
+                    @ViewBag.NavTitle
+                </div>
+            </div>
+
+            <!-- Sección derecha: búsqueda + usuario -->
+            <div class="flex items-center space-x-6">
+                <!-- Botón búsqueda -->
+                <div class="relative">
+                    <button type="button" id="toggle-search"
+                            class="text-gray-600 text-lg hover:text-gray-800 p-2 rounded-md hover:bg-gray-100" aria-expanded="false">
+                        <i class="fa fa-search"></i>
+                    </button>
+
+                    <!-- Form búsqueda -->
+                    <form id="search-form"
+                          class="hidden absolute right-0 top-full mt-2 bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-50" role="search">
+                        <input id="search-input" type="text" placeholder="Buscar..."
+                               class="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <button type="button" id="close-search" class="ml-2 text-gray-500 hover:text-gray-700">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Usuario + botón salir -->
+                <div class="flex items-center space-x-3">
+                    <i class="fa fa-user text-gray-600 text-lg"></i>
+                    <span class="text-gray-800 text-sm font-medium">
+                        @Html.Raw(username)
+                    </span>
+
+                    @if (Request.IsAuthenticated)
+                    {
+                        using (Html.BeginForm("LogOff", "Account", FormMethod.Post, new { id = "logoutForm", @class = "inline-flex" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-sm flex items-center transition duration-150 ease-in-out">
+                                <i class="fa fa-sign-out-alt mr-1"></i> Salir
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="flex-1 overflow-y-auto p-6">
+            @RenderBody()
+        </main>
+
+        <!-- Footer -->
+        <footer class="h-12 bg-gray-200 flex items-center justify-center text-sm text-gray-600">
+            © @DateTime.Now.Year - TEC Tracker
+        </footer>
+    </div>
+
+    <!-- Modal Global -->
+    <div id="globalModal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">Título</h2>
+            <p class="text-gray-700 mb-4">Contenido del modal</p>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
+                <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle sidebar: oculta/muestra el aside
+        function toggleSidebar(btn) {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            sidebar.classList.toggle('hidden');
+
+            // accesibilidad
+            if (btn) {
+                const expanded = btn.getAttribute('aria-expanded') === 'true';
+                btn.setAttribute('aria-expanded', (!expanded).toString());
+            }
+        }
+
+        // Toggle menús (adminMenu, reportMenu, etc.)
+        function toggleMenu(id) {
+            const menu = document.getElementById(id);
+            const icon = document.getElementById(id + "Icon");
+            const button = document.querySelector(`button[onclick*="${id}"]`);
+
+            if (!menu) return;
+
+            const isHidden = menu.classList.contains('hidden');
+            // cerrar todos los menús antes (si prefieres permitir varios abiertos, quita este bloque)
+            document.querySelectorAll("[id$='Menu']").forEach(m => {
+                if (m.id !== id) {
+                    m.classList.add('hidden');
+                    const i = document.getElementById(m.id + "Icon");
+                    if (i) i.classList.remove('rotate-180');
+                    const btnOther = document.querySelector(`button[onclick*="${m.id}"]`);
+                    if (btnOther) btnOther.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            menu.classList.toggle('hidden', !isHidden); // si estaba hidden => mostrar
+            if (icon) icon.classList.toggle('rotate-180', isHidden);
+            if (button) button.setAttribute('aria-expanded', isHidden.toString());
+        }
+
+        function closeModal() {
+            const modal = document.getElementById("globalModal");
+            if (modal) modal.classList.add("hidden");
+        }
+
+        // Search toggle
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggleSearchBtn = document.getElementById('toggle-search');
+            const closeSearchBtn = document.getElementById('close-search');
+            const searchForm = document.getElementById('search-form');
+
+            if (toggleSearchBtn && searchForm) {
+                toggleSearchBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    const isHidden = searchForm.classList.contains('hidden');
+                    searchForm.classList.toggle('hidden');
+                    toggleSearchBtn.setAttribute('aria-expanded', (!isHidden).toString());
+                    if (!isHidden) {
+                        // foco en input si se abrió
+                        const input = document.getElementById('search-input');
+                        if (input) input.focus();
+                    }
+                });
+            }
+
+            if (closeSearchBtn && searchForm) {
+                closeSearchBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    searchForm.classList.add('hidden');
+                    toggleSearchBtn?.setAttribute('aria-expanded', 'false');
+                });
+            }
+
+            // Cerrar menús/modal/search con ESC
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    // cerrar menus
+                    document.querySelectorAll("[id$='Menu']").forEach(m => m.classList.add('hidden'));
+                    document.getElementById('globalModal')?.classList.add('hidden');
+                    document.getElementById('search-form')?.classList.add('hidden');
+                }
+            });
+
+            // click fuera: cierra menús y search
+            document.addEventListener('click', function (e) {
+                // cerrar menús que terminen en Menu
+                document.querySelectorAll("[id$='Menu']").forEach(menu => {
+                    if (!e.target.closest(`#${menu.id}`) && !e.target.closest(`button[onclick*="${menu.id}"]`)) {
+                        menu.classList.add('hidden');
+                        const icon = document.getElementById(menu.id + "Icon");
+                        if (icon) icon.classList.remove('rotate-180');
+                        const btn = document.querySelector(`button[onclick*="${menu.id}"]`);
+                        if (btn) btn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+
+                // cerrar search si clic fuera del formulario y no es el boton toggle
+                const searchFormEl = document.getElementById('search-form');
+                const toggleSearchBtnEl = document.getElementById('toggle-search');
+                if (searchFormEl && !e.target.closest('#search-form') && !e.target.closest('#toggle-search')) {
+                    searchFormEl.classList.add('hidden');
+                    if (toggleSearchBtnEl) toggleSearchBtnEl.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

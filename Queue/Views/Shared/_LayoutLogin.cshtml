@@ -1,0 +1,57 @@
+﻿
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../images/favicon.ico">
+
+    <title>@ViewBag.Title - Teck Tracker</title>
+    @*<link href="~/assets/vendor_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="~/Content/css/bootstrap-extend.css" rel="stylesheet" />
+        <link href="~/Content/css/master_style.css" rel="stylesheet" />
+        <link href="~/Content/css/skins/_all-skins.css" rel="stylesheet" />*@
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="hold-transition bg-img"
+      style="background-image: url('@Url.Content("~/TemplateAssets/assets/images/Fondo-ondas.png")');
+             background-size: 100% 100%;
+             background-repeat: no-repeat;
+             background-attachment: fixed;">
+    >
+
+    <div class="container mx-auto min-h-screen flex items-center justify-center">
+        <div class="flex flex-wrap justify-center w-full">
+            <!-- Columna Logo -->
+            <div class="w-full md:w-5/12 lg:w-4/12">
+                <div class="flex flex-col justify-center items-center h-full  rounded-xl p-6">
+                    <div class="w-full">
+                        <div class="logo-mini">
+                            <span class="light-logo"><img style="width:100%" src="~/TemplateAssets/assets/images/Teck logo.png" alt="logo"></span>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Login -->
+            <div class="w-full md:w-5/12 lg:w-5/12">
+                <div class=" rounded-xl  p-10 h-full">
+                    @RenderBody()
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="~/assets/vendor_components/jquery-3.3.1/jquery-3.3.1.min.js"></script>
+    <script src="~/assets/vendor_components/popper/dist/popper.min.js"></script>
+    <script src="~/assets/vendor_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    @*@Scripts.Render("~/assets/loginscripts")*@
+    @RenderSection("scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,6 @@
+﻿@if (Context.Request.Url.AbsolutePath.ToLower() == "/operation/employeelocation")
+{
+    @Html.Partial("../Partial/_Filters")
+    <div id="map">
+    </div>
+}

@@ -1,0 +1,174 @@
+﻿@model IEnumerable<Queue.Models.Agent_Employee>
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.tailwindcss.min.css" />
+
+<div class="flex flex-col space-y-4">
+    <!-- Encabezado -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-semibold text-gray-800">Resumen Usuario</h2>
+        <div class="flex space-x-2">
+            <a href="@Url.Action("Create", "Agent_Employee")"
+               class="btn_create flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
+                <i class="fa fa-plus mr-2"></i> Crear Empleado
+            </a>
+            <a href="@Url.Action("uploaduser", "Agent_Employee")"
+               class="flex items-center px-4 py-2 bg-indigo-400 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg shadow">
+                <i class="fa fa-upload mr-2"></i> Cargar Empleados
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <table id="myTable" class="min-w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                    <th class="px-4 py-2 font-medium">Identificación</th>
+                    <th class="px-4 py-2 font-medium">Nombre</th>
+                    <th class="px-4 py-2 font-medium">Correo</th>
+                    <th class="px-4 py-2 font-medium">Usuario</th>
+                    <th class="px-4 py-2 font-medium">Estado</th>
+                    <th class="px-4 py-2 font-medium text-center">Editar</th>
+                    <th class="px-4 py-2 font-medium text-center">Eliminar</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @foreach (var item in Model)
+                {
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Identificacion)</td>
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Nombre)</td>
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Email)</td>
+                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Usuario)</td>
+                        <td class="px-4 py-2">
+                            @if (item.status == true)
+                            {
+                                <span class="text-green-600 font-medium">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="text-red-600 font-medium">Inactivo</span>
+                            }
+                        </td>
+
+                        <!-- Editar -->
+                        <td class="text-center">
+                            <a class="px-3 py-1 border rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-100 transition btn-edit"
+                               href="@Url.Action("Edit", "Agent_Employee", new { id = item.idEmployee })">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a1 1 0 0 0 0-1.414L15.414 4.586a1 1 0 0 0-1.414 0L4 14.586V20z" />
+                                </svg>
+                            </a>
+                        </td>
+                        <!-- Eliminar -->
+                        <td class="text-center">
+                            <a class="px-3 py-1 border rounded-lg text-red-600 border-red-300 hover:bg-red-100 transition btn-delete"
+                               href="@Url.Action("Delete", "Agent_Employee", new { id = item.idEmployee })">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </a>
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modales dinámicos -->
+<div id="deleteModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-[32rem] max-h-[90vh] overflow-y-auto">
+        <div id="deleteModalContent"></div>
+    </div>
+</div>
+
+<div id="editModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-[40rem] max-h-[90vh] overflow-y-auto">
+        <div id="editModalContent"></div>
+    </div>
+</div>
+
+<div id="createModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-[40rem] max-h-[90vh] overflow-y-auto">
+        <div id="createModalContent"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            var table = $('#myTable').DataTable({
+                pageLength: 15,
+                lengthMenu: [[15, 25, 50, -1], [15, 25, 50, "Todos"]],
+                dom:
+                    "<'flex items-center justify-between mb-4'<'flex items-center'l><'flex items-center'f>>" +
+                    "rt" +
+                    "<'flex items-center justify-between mt-4'<'text-sm'i><'flex items-center'p>>",
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Buscar...",
+                    lengthMenu: "Mostrar _MENU_ registros",
+                    info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                    infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                    paginate: {
+                        first: "<<",
+                        last: ">>",
+                        next: ">",
+                        previous: "<"
+                    }
+                },
+                initComplete: function () {
+                    // Estilos Tailwind
+                    $('#myTable_filter input').addClass('px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500');
+                    $('#myTable_length select').addClass('px-2 py-1 border rounded-lg');
+                    $('#myTable_info').addClass('text-sm text-gray-600');
+                    $('#myTable_paginate').addClass('flex items-center space-x-2');
+
+                    // Paginador circular
+                    $('#myTable_paginate .paginate_button').addClass('px-3 py-1 border rounded-full hover:bg-gray-100 transition');
+                    $('#myTable_paginate .paginate_button.disabled').addClass('opacity-50 cursor-not-allowed');
+                }
+            });
+
+            // Abrir modales dinámicos
+            $(document).on('click', '.btn-delete', function (e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                $("#deleteModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
+                $("#deleteModal").removeClass("hidden");
+                $.get(url, function (data) { $("#deleteModalContent").html(data); });
+            });
+
+            $(document).on('click', '.btn-edit', function (e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                $("#editModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
+                $("#editModal").removeClass("hidden");
+                $.get(url, function (data) { $("#editModalContent").html(data); });
+            });
+
+            $(document).on('click', '.btn_create', function (e) {
+                e.preventDefault();
+                var url = $(this).attr('href');
+                $("#createModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
+                $("#createModal").removeClass("hidden");
+                $.get(url, function (data) { $("#createModalContent").html(data); });
+            });
+        });
+
+        // Funciones para cerrar modales
+        function closeDeleteModal() { $("#deleteModal").addClass("hidden").html(""); }
+        function closeEditModal() { $("#editModal").addClass("hidden").html(""); }
+        function closeCreateModal() { $("#createModal").addClass("hidden").html(""); }
+    </script>
+}

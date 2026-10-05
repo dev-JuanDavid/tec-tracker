@@ -1,0 +1,52 @@
+﻿@{
+    ViewBag.Title = "Parameter System";
+}
+
+<div class="flex justify-center">
+    <div class="w-full">
+        <div class="bg-white rounded-2xl shadow p-6">
+            <!-- Header -->
+            <div class="flex items-center border-b pb-4 mb-4">
+                <i class="glyphicon glyphicon-file text-gray-500 mr-2"></i>
+                <h4 class="text-xl font-semibold text-gray-700">Parameter System</h4>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table id="TableParamater" class="min-w-full border border-gray-200 text-sm text-left text-gray-700">
+                    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-2 w-1/5">Company</th>
+                            <th class="px-4 py-2 w-[15%]">Inactivity Period (Segundos)</th>
+                            <th class="px-4 py-2 w-[15%]">Capture Frecuency</th>
+                            <th class="px-4 py-2 w-[15%]">Upload Frecuency</th>
+                            <th class="px-4 py-2 w-[15%]">Location Frecuency (minutes)</th>
+                            <th class="px-4 py-2 w-[15%]">Date Creation</th>
+                            <th class="px-4 py-2 w-[10%]"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody" class="divide-y divide-gray-200">
+                        <!-- DataTables poblará esto dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
+    <script src="~/js/sci_DataTable.js"></script>
+    <script>
+        $(document).ready(function () {
+            let _url = `@Url.Action("GetParameterSystem", "Operation")`;
+            _dtTable.GetDataParamaterSystem('#TableParamater', _url);
+        });
+    </script>
+}

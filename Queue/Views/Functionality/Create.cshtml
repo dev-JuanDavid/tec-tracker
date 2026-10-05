@@ -1,0 +1,40 @@
+﻿@model Queue.Models.Functionality
+
+@{
+    ViewBag.Title = "Add";
+
+
+}
+
+<h2>Add Functionality</h2>
+
+@using (Html.BeginForm("Create", "Functionality", FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <div class="form-group">
+            @Html.LabelFor(m => m.Name, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.DropDownListFor(m => m.IdFunctionality, (IEnumerable<SelectListItem>)ViewBag.Functionality)
+                @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+            </div>
+            @Html.Hidden("IdCompany", (object)(ViewBag.IdCompany ?? Model.IdCompany))
+        </div>
+
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <button type="submit" class="btn btn-info">Add</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="@Url.Action("Index", "Functionality", new { idCompany = ViewBag.IdCompany ?? Model.IdCompany })" class="btn btn-info">
+        Back to List
+    </a>
+    
+</div>

@@ -1,0 +1,266 @@
+﻿@model Queue.ViewModels.TimePerActivityViewModel
+@{
+    ViewBag.Title = "Reporte";
+
+    var userList = ViewData["UserList"] as SelectList
+        ?? new SelectList(new List<object> { new { Value = "", Text = "Todos" } }, "Value", "Text");
+
+    var groupList = ViewBag.idgruoup as List<SelectListItem>
+        ?? new List<SelectListItem> { new SelectListItem { Text = "Todos", Value = "" } };
+}
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css">
+
+<div class="p-6 bg-gray-100 min-h-screen space-y-6">
+    <h2 class="text-lg font-semibold text-gray-700">Reporte Sumado por Actividad</h2>
+
+    <!-- 🔹 Filtros -->
+    <form method="post" id="filterForm" class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center ">
+        @Html.AntiForgeryToken()
+
+        <div class="flex-grow min-w-[120px]">
+
+            <input type="date" id="from" name="from"
+                   value="@(Model.from == DateTime.MinValue ? DateTime.Today.ToString("yyyy-MM-dd") : Model.from.ToString("yyyy-MM-dd"))"
+                   class="w-full appearance-none rounded-lg border border-gray-300 bg-white pl-10 pr-8 py-2 text-gray-700
+                   text-sm font-medium shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+
+        <div class="flex-grow min-w-[120px]">
+
+            <input type="date" id="to" name="to"
+                   value="@(Model.to == DateTime.MinValue ? DateTime.Today.ToString("yyyy-MM-dd") : Model.to.ToString("yyyy-MM-dd"))"
+                   class="w-full appearance-none rounded-lg border border-gray-300 bg-white pl-10 pr-8 py-2 text-gray-700
+                    text-sm font-medium shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <!-- Grupos -->
+        <div class="flex-grow min-w-[140px] px-2">
+            <div class="relative">
+                <select id="idGroup" name="idgruoup"
+                        class="w-full appearance-none rounded-lg border border-gray-300 bg-white pl-10 pr-8 py-2 text-gray-700 text-sm font-medium shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    @foreach (var g in groupList)
+                    {
+                        <option value="@g.Value" @(Model.idgruoup != Guid.Empty && Model.idgruoup.ToString() == g.Value ? "" : "")>@g.Text</option>
+                    }
+                </select>
+
+                <!-- Icono a la izquierda -->
+                <div class="absolute inset-y-0 left-2 flex items-center pointer-events-none text-gray-500">
+                    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M12 6a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm-1.5 8a4 4 0 0 0-4 4 2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 4 4 0 0 0-4-4h-3Zm6.82-3.096a5.51 5.51 0 0 0-2.797-6.293 3.5 3.5 0 1 1 2.796 6.292ZM19.5 18h.5a2 2 0 0 0 2-2 4 4 0 0 0-4-4h-1.1a5.503 5.503 0 0 1-.471.762A5.998 5.998 0 0 1 19.5 18ZM4 7.5a3.5 3.5 0 0 1 5.477-2.889 5.5 5.5 0 0 0-2.796 6.293A3.501 3.501 0 0 1 4 7.5ZM7.1 12H6a4 4 0 0 0-4 4 2 2 0 0 0 2 2h.5a5.998 5.998 0 0 1 3.071-5.238A5.505 5.505 0 0 1 7.1 12Z" clip-rule="evenodd" />
+                    </svg>
+
+
+                </div>
+
+                <!-- Flechita select a la derecha -->
+                <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Empleados -->
+        <div class="flex-grow min-w-[140px] px-2">
+            <div class="relative">
+                <select id="listUsers" name="user" class="w-full appearance-none rounded-lg border border-gray-300 bg-white pl-10 pr-8 py-2 text-gray-700 text-sm font-medium shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Seleccione</option>
+                    @foreach (var user in userList)
+                    {
+                        <option value="@user.Value" @(Model.user == user.Value ? "Empleados" : "")>@user.Text</option>
+                    }
+                </select>
+                <div class="absolute inset-y-0 left-2 flex items-center pointer-events-none text-gray-500">
+                    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-4Z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón filtrar -->
+        <div class="flex justify-end mt-6 space-x-4">
+            <button type="submit" id="btnFilter"    
+                    class="w-full md:w-auto py-2 px-6 bg-white text-gray-700 font-semibold rounded-lg shadow-sm hover:border-blue-500 border border-gray-300 transition duration-200 text-sm flex items-center justify-center">
+                <i class="fa-solid fa-circle-play mr-2"></i>
+                Filtrar
+            </button>
+            </div>
+    </form>
+
+
+    <!-- 🔹 Dashboard tipo "TOP PROGRAMS" -->
+    <div class="flex h-[600px] bg-white rounded-lg shadow p-6 gap-6">
+        <!-- Donut -->
+        <div class="flex justify-center items-center w-2/5">
+            <canvas id="doughnutChart" class="max-h-[400px]"></canvas>
+        </div>
+
+        <!-- Ranking -->
+        <div class="space-y-3 w-3/5 ranking-scroll">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">Programas por horas</h3>
+
+            @if (Model.activities != null && Model.activities.Any())
+            {
+                var colors = new List<string>();
+                var rnd = new Random();
+
+                // total para normalizar barras
+                var totalMinutesGlobal = (int)Math.Round(Model.activities.Sum(a => a.time) * 60, 0);
+
+                foreach (var act in Model.activities.OrderByDescending(a => a.time))
+                {
+                    // color único por programa
+                    var color = String.Format("hsl({0},70%,60%)", rnd.Next(0, 360));
+                    colors.Add(color);
+
+                    var totalMinutes = (int)Math.Round(act.time * 60, 0);
+                    var h = totalMinutes / 60;
+                    var m = totalMinutes % 60;
+
+                    // ancho relativo (en %)
+                    var widthPercent = totalMinutesGlobal > 0
+                        ? ((totalMinutes * 100) / totalMinutesGlobal)
+                        : 0;
+
+                    <div class="flex items-center">
+                        <!-- Punto de color -->
+                        <div class="w-3 h-3 rounded-full mr-2" style="background-color:@color"></div>
+
+                        <!-- Nombre + barra -->
+                        <div class="flex-1">
+                            <span class="text-sm text-gray-700">@act.program</span>
+                            <div class="bg-gray-200 h-2 rounded">
+                                <div class="h-2 rounded" style="width:@widthPercent%; background-color:@color"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tiempo -->
+                        <span class="ml-2 text-sm font-medium">@h:@m.ToString("D2")</span>
+                    </div>
+                }
+
+                // guardamos colores para usarlos en Chart.js
+                ViewBag.ChartColors = colors;
+            }
+            else
+            {
+                <p class="text-gray-500">No hay datos disponibles.</p>
+            }
+        </div>
+    </div>
+
+
+</div>
+
+<!-- 🔹 CSS scroll estilizado -->
+<style>
+    .ranking-scroll {
+        max-height: 700px; /* controlamos altura del scroll */
+        overflow-y: auto;
+        padding-right: 8px; /* espacio para el scrollbar */
+    }
+
+        /* Scroll personalizado (Webkit: Chrome, Edge, Safari) */
+        .ranking-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ranking-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .ranking-scroll::-webkit-scrollbar-thumb {
+            background: #9ca3af; /* gris Tailwind gray-400 */
+            border-radius: 4px;
+        }
+
+            .ranking-scroll::-webkit-scrollbar-thumb:hover {
+                background: #6b7280; /* gris más oscuro gray-600 */
+            }
+
+    /* Firefox */
+    .ranking-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: #9ca3af #f1f1f1;
+    }
+</style>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            var labels = [];
+            var data = [];
+            var colors = [];
+
+            @if (Model.activities != null && Model.activities.Any())
+            {
+                foreach (var act in Model.activities.OrderByDescending(a => a.time))
+                {
+                    @:labels.push("@act.program");
+                    @:data.push(@Math.Round(act.time * 60, 2)); // en minutos
+                }
+
+                foreach (var c in (List<string>)ViewBag.ChartColors)
+                {
+                    @:colors.push("@c");
+                }
+            }
+
+            new Chart(document.getElementById("doughnutChart"), {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let minutes = context.raw;
+                                    let h = Math.floor(minutes / 60);
+                                    let m = Math.floor(minutes % 60);
+                                    return context.label + ": " + h + "h " + m + "m";
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // recargar empleados al cambiar grupo
+            $("#idGroup").change(function () {
+                var idEmployeeGroup = $(this).val();
+                $.ajax({
+                    url: "@Url.Action("GetUserByArea", "Operation")",
+                    type: "POST",
+                    data: {
+                        IdGroupEmployee: idEmployeeGroup,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (data) {
+                        var $userSelect = $("#listUsers");
+                        $userSelect.empty().append("<option value=''>Seleccione</option>");
+                        $.each(data, function (i, row) {
+                            $userSelect.append("<option value='" + row.Value + "'>" + row.Text + "</option>");
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

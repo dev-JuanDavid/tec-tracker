@@ -1,0 +1,114 @@
+﻿@model Queue.Models.Agent_Employee
+
+@{
+    Layout = null; // 👉 Importante: sin layout, porque va dentro del modal
+}
+
+@using (Html.BeginForm("Edit", "Agent_Employee", FormMethod.Post, new { id = "frm_edit" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.idEmployee)
+
+    <div class="space-y-6">
+        <!-- Título -->
+        <h2 class="text-2xl font-semibold text-gray-800">✏️ Editar Empleado</h2>
+
+        <!-- Formulario -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Nombre -->
+            <div>
+                @Html.LabelFor(m => m.Nombre, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.EditorFor(m => m.Nombre, new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
+                @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Identificación -->
+            <div>
+                @Html.LabelFor(m => m.Identificacion, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.EditorFor(m => m.Identificacion, new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
+                @Html.ValidationMessageFor(m => m.Identificacion, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Dirección -->
+            <div>
+                @Html.LabelFor(m => m.Direccion, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.EditorFor(m => m.Direccion, new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
+                @Html.ValidationMessageFor(m => m.Direccion, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Teléfono -->
+            <div>
+                @Html.LabelFor(m => m.Telefono, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.EditorFor(m => m.Telefono, new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
+                @Html.ValidationMessageFor(m => m.Telefono, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Email -->
+            <div>
+                @Html.LabelFor(m => m.Email, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.EditorFor(m => m.Email, new { htmlAttributes = new { @type = "email", @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
+                @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Usuario -->
+            <div>
+                @Html.LabelFor(m => m.Usuario, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.EditorFor(m => m.Usuario, new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
+                @Html.ValidationMessageFor(m => m.Usuario, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Cargo -->
+            <div>
+                @Html.LabelFor(m => m.Cargo, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.DropDownList("Cargo", new SelectList(ViewBag.Jobs, "idJob", "Cargo"), new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" })
+                @Html.ValidationMessageFor(m => m.Cargo, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Grupo de empleados -->
+            <div>
+                @Html.LabelFor(m => m.IdEmployeesGroup, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.DropDownListFor(m => m.IdEmployeesGroup, ViewData["GroupList"] as SelectList, new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" })
+                @Html.ValidationMessageFor(m => m.IdEmployeesGroup, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Estado -->
+            <div>
+                @Html.LabelFor(m => m.status, new { @class = "block text-sm font-medium text-gray-700" })
+                <select class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        id="string_status" name="string_status">
+                    <option value="1" @(Model.status ? "selected" : "")>Activo</option>
+                    <option value="0" @(!Model.status ? "selected" : "")>Inactivo</option>
+                </select>
+                @Html.ValidationMessageFor(m => m.status, "", new { @class = "text-red-500 text-sm" })
+            </div>
+
+            <!-- Horario -->
+            <div>
+                @Html.LabelFor(m => m.Id_GroupHorary, new { @class = "block text-sm font-medium text-gray-700" })
+                @Html.DropDownList("Id_GroupHorary", new SelectList(ViewBag.Horarys, "Id_GroupHorary", "NameGroup"), new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" })
+                @Html.ValidationMessageFor(m => m.Id_GroupHorary, "", new { @class = "text-red-500 text-sm" })
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end space-x-2">
+            <button type="submit"
+                    class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow">
+                💾 Guardar cambios
+            </button>
+            <button type="button" onclick="closeEditModal()"
+                    class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg shadow">
+                Cancelar
+            </button>
+        </div>
+    </div>
+}
+
+<script>
+    $(document).ready(function () {
+        var status = '@ViewBag.status';
+        if (status === "False") {
+            $("#string_status").val("0");
+        }
+    });
+</script>

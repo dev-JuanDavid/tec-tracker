@@ -1,0 +1,157 @@
+﻿@model Queue.ViewModels.MostSearchedPagesViewModel
+@{
+    ViewBag.Title = "MostSearchedPages";
+    var listUsuarios = new List<object> { new { Usuario = "Todos", Nombre = "" } };
+    var UsersList = ViewData["UserList"] == null ? new SelectList(listUsuarios, "Usuario", "Nombre") : ViewData["UserList"];
+}
+
+<h2>Reporte de Paginas Más Visitadas</h2>
+<div>
+    @using (Html.BeginForm("MostSearchedPages", "Operation", FormMethod.Post, new { id = "frm_register" }))
+    {
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="form-group">
+                    @Html.LabelFor(model => model.from, htmlAttributes: new { @class = "control-label col-md-12" })
+                    <div class="col-md-10">
+                        @Html.EditorFor(model => model.from, new { htmlAttributes = new { @class = "form-control", @type = "date" } })
+                        @Html.ValidationMessageFor(model => model.from, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="form-group">
+                    @Html.LabelFor(model => model.to, htmlAttributes: new { @class = "control-label col-md-12" })
+                    <div class="col-md-10">
+                        @Html.EditorFor(model => model.to, new { htmlAttributes = new { @class = "form-control", @type = "date" } })
+                        @Html.ValidationMessageFor(model => model.to, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3" id="dropDownListdiv">
+                <label asp-for="IdEmployeeGroup" class="control-label">Área de Trabajo</label>
+                <span asp-validation-for="IdEmployeeGroup" class="text-danger"></span>
+                @Html.DropDownListFor(m => m.IdEmployeesGroup, ViewData["GroupList"] as SelectList, "Por favor seleccione", new { @class = "form-control" })
+                @Html.ValidationMessageFor(m => m.IdEmployeesGroup, "", new { @class = "text-danger" })
+                <br />
+            </div>
+
+            <div class="col-lg-3">
+                <label>Empleados</label>
+                @Html.DropDownList("user", UsersList as SelectList, "Todos", new { @class = "form-control", id = "idEmployee" })
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-10">
+            </div>
+            <div class="col-lg-2">
+                <br />
+                <div class="d-flex flex-row-reverse">
+                    <button id="add_Employee" name="add_dictionary" type="submit" value="Create" class="btn btn-info waves-effect waves-light btn-block">
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="col-12 col-lg-12 mt-2">
+    <div class="box">
+        <div class="box-header with-border">
+            <h4 class="box-title">Detalle por Paginas</h4>
+        </div>
+        <div class="box-body p-15">
+            <div class="table-responsive">
+                <table id="myTable" class="table mt-0 table-hover no-wrap table-bordered" data-page-size="10">
+                    <thead>
+                        <tr>
+                            <th class="TextLeft">URL</th>
+                            <th class="TextLeft">Horas de Uso</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.activities)
+                        {
+                            <tr>
+                                <td class="break-long-urls">@item.Url</td>
+                                <td>@item.time.ToString("0.0#")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
+    <script type="text/javascript" src="https://html2canvas.hertzen.com/dist/html2canvas.js"></script>
+    <script src="~/assets/plugins/general/moment/min/moment.min.js" type="text/javascript"></script>
+    <script>
+    $(document).ready(function () {
+        $("#dropDownListdiv").on("change", "select", function () {
+            var idWorkArea = $(this).val();
+            $.post("@Url.Action("GetUserByArea")", { IdGroupEmployee: idWorkArea }, function (data) {
+                PopulateDropDown("#idEmployee", data);
+            });
+        });
+
+        // Inicializa la tabla DataTables
+        var table = $('#myTable').DataTable({
+            "columnDefs": [
+                {
+                    "targets": 1, // El índice de la columna 'Horas de Uso'
+                    "render": function (data, type, row) {
+                        return formatTime(data);
+                    }
+                }
+            ]
+        });
+
+        function PopulateDropDown(dropDownId, list) {
+            $(dropDownId).empty();
+            $(dropDownId).append("<option selected='selected'>Todos</option>")
+            $.each(list, function (index, row) {
+                $(dropDownId).append("<option value='" + row.Value + "'>" + row.Text + "</option>");
+            });
+        }
+
+        function formatTime(hours) {
+            var seconds = hours * 3600;
+            if (seconds < 60) {
+                return seconds.toFixed(0) + " segundos";
+            } else if (seconds < 3600) {
+                var minutes = (seconds / 60).toFixed(0);
+                return minutes + " minutos";
+            } else {
+                var hours = (seconds / 3600).toFixed(1);
+                return hours + " horas";
+            }
+        }
+
+        // Asegúrate de aplicar la clase break-long-urls a las celdas URL
+        $('#myTable tbody tr td:first-child').each(function() {
+            var cellText = $(this).text();
+            if (cellText.length > 50) {
+                $(this).addClass('break-long-urls');
+            }
+        });
+    });
+    </script>
+    <style>
+        .break-long-urls {
+            word-break: break-word;
+            white-space: pre-wrap;
+            max-width: 50ch; /* 50 caracteres */
+        }
+    </style>
+}

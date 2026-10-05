@@ -1,0 +1,75 @@
+﻿@model IEnumerable<Queue.Models.NotificacionUsuarioReport>
+
+@{
+    ViewBag.Title = "Notificacion Usuario Report";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div id="notificacionUsuarioReport" class="flex justify-center px-6 py-6">
+    <div class="w-full">
+        <div class="bg-white shadow-lg rounded-xl border border-gray-200">
+
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h4 class="text-lg font-semibold text-gray-800">Notificación Usuario</h4>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6 space-y-6">
+                <div class="flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex-1"></div>
+                    <div class="flex-1"></div>
+                </div>
+
+                <!-- Tabla -->
+                <div class="overflow-x-auto">
+                    <table id="myTable" class="min-w-full border border-gray-200 divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-2 text-center font-semibold text-gray-700">Usuario</th>
+                                <th class="px-4 py-2 text-center font-semibold text-gray-700">Descripción</th>
+                                <th class="px-4 py-2 text-center font-semibold text-gray-700">Fecha Creación</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @if (Model != null)
+                            {
+                                foreach (var item in Model)
+                                {
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-2 text-center text-gray-800">
+                                            @Html.DisplayFor(modelItem => item.Usuario)
+                                        </td>
+                                        <td class="px-4 py-2 text-center text-gray-800">
+                                            @Html.DisplayFor(modelItem => item.Descripcion)
+                                        </td>
+                                        <td class="px-4 py-2 text-center text-gray-800">
+                                            @Html.DisplayFor(modelItem => item.Date)
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
+    <script type="text/javascript" src="https://html2canvas.hertzen.com/dist/html2canvas.js"></script>
+    <script src="~/assets/plugins/general/moment/min/moment.min.js" type="text/javascript"></script>
+    <script src="~/js/DownloadsPDF.js"></script>
+    <script>
+        $('#myTable').DataTable();
+    </script>
+}

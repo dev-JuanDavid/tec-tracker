@@ -1,0 +1,89 @@
+﻿@model IEnumerable<Queue.Models.Agent_ProgramClasification>
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-7xl mx-auto p-6 space-y-6">
+
+    <!-- Encabezado y botón -->
+    <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+        <h4 class="text-xl font-semibold">Clasificación de programas</h4>
+        <a href="@Url.Action("Create", "Agent_ProgramClasification")"
+           class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded flex items-center gap-2 mt-2 md:mt-0">
+            <i class="fa fa-plus"></i> Nueva Clasificacion
+        </a>
+    </div>
+
+    <!-- Tabla -->
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table id="myTable" class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        @Html.DisplayNameFor(model => model.name)
+                    </th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        @Html.DisplayNameFor(model => model.clasification)
+                    </th>
+                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Grupos</th>
+                    <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @foreach (var item in Model)
+                {
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2 text-gray-700">@Html.DisplayFor(modelItem => item.name)</td>
+                        <td class="px-4 py-2 text-gray-700">
+                            @if (item.clasification == 1)
+                            {
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-sm">Productiva</span>
+                            }
+                            else if (item.clasification == 2)
+                            {
+                                <span class="bg-red-500 text-white px-2 py-1 rounded text-sm">Improductiva</span>
+                            }
+                            else
+                            {
+                                <span class="bg-yellow-500 text-white px-2 py-1 rounded text-sm">Neutral</span>
+                            }
+                        </td>
+                        <td class="px-4 py-2 text-center">
+                            <a href="@Url.Action("AsignarGrupo", "Agent_ProgramClasification", new { id = item.idprogramclasification })"
+                               class="text-gray-600 hover:text-gray-800 border border-gray-300 rounded px-2 py-1">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                        </td>
+                        <td class="px-4 py-2 text-center">
+                            <a href="@Url.Action("Edit","Agent_ProgramClasification", new { id = item.idprogramclasification })"
+                               class="text-gray-600 hover:text-gray-800 border border-gray-300 rounded px-2 py-1">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#myTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+            });
+        });
+    </script>
+}

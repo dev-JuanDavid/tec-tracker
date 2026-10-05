@@ -1,0 +1,85 @@
+﻿
+@{
+    ViewBag.Title = "FileTransfer";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="box-header with-border">
+                <i class="glyphicon glyphicon-file"></i>
+                <h4 class="box-title">Report File Transfer</h4>
+            </div>
+            <div class="card-body">
+                @Html.Partial("../Partial/_Filters")
+                @Html.Partial("../Partial/_FileTransferReportData")
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
+    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
+    <script src="~/js/sci_DataTable.js"></script>
+    <script>
+        $("#filter").click(function () {
+            let _url = `@Url.Action("getfiletransfer", "reports")`;
+            _dtTable.GetData('#myTable', `${_url}?startDate=${$("#StartDate").val()}&endDate=${$("#EndDate").val()}&user=${$("#user").val() }`);
+        })
+
+        function detail(id) {
+            $(".sci_md > table").remove();
+            $(".sci_md").append(
+                `<table class="table table-bordered table-striped text-center">
+                    <thead><tr><th class="text-bold" width="10%">Propiedad</th><th class="text-bold" width="90%">Descripción</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                           <td class="text-bold">ProcessID:</td>
+                            <td>${_dtTable.dataArray[id].ProcessID}</td>                            
+                        </tr>
+                         <tr>
+                            <td class="text-bold">ProcessName:</td>
+                            <td>${_dtTable.dataArray[id].ProcessName}</td>                            
+                        </tr>
+                        <tr>
+                            <td class="text-bold">FileName:</td>
+                            <td>${_dtTable.dataArray[id].FileName}</td>                            
+                        </tr>                      
+                        <tr>
+                            <td class="text-bold">FirstReadTime:</td>
+                            <td>${_dtTable.dataArray[id].FirstReadTime}</td>                            
+                        </tr>
+                        <tr>
+                            <td class="text-bold">ReadBytes:</td>
+                            <td>${_dtTable.dataArray[id].ReadBytes}</td>                            
+                        </tr>
+                       <tr>
+                            <td class="text-bold">ReadCount:</td>
+                            <td>${_dtTable.dataArray[id].ReadCount}</td>                            
+                        </tr>
+                       <!-- <tr>
+                            <td class="text-bold">ReadWriteBytes:</td>
+                            <td>${_dtTable.dataArray[id].ReadWriteBytes}</td>                            
+                        </tr>
+                       <tr>
+                            <td class="text-bold">ReadWriteCount:</td>
+                            <td>${_dtTable.dataArray[id].ReadWriteCount}</td>                            
+                        </tr>
+                        <tr>
+                            <td class="text-bold">LastReadTime:</td>
+                            <td>${_dtTable.dataArray[id].LastReadTime}</td>                            
+                        </tr> -->
+                    </tbody>
+                </table>`);
+            $("#sci_md").modal();
+        }
+
+    </script>
+}

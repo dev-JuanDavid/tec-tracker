@@ -1,0 +1,70 @@
+﻿@{
+    ViewBag.Title = "Bienvenido";
+    Layout = "~/Views/Shared/_LayoutLogin.cshtml";
+}
+<div class="container">
+    <div class="row text-center">
+        <div class="col-sm-12">
+            <h1>¡Bienvenido!</h1>
+            <p id="status"></p>
+            <button class="btn btn-info btn-block text-uppercase waves-effect waves-light" onClick="Finalizar();">Reportar</button>
+        </div>
+    </div>
+</div>
+<script src="~/assets/vendor_components/jquery-3.3.1/jquery-3.3.1.min.js"></script>
+
+<script>
+    var Companykey = '@ViewBag.Companykey';
+    var UserName = '@ViewBag.UserName';
+
+    $(document).ready(function () {
+        geoFindMe();
+    });
+
+    function geoFindMe() {
+        const status = document.querySelector("#status");
+
+        function success(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            console.log(latitude +" "+ longitude);
+            $.ajax({
+                url: "Location/PostLocation",
+                type: 'POST',
+                data: {
+                    "companykey": Companykey,
+                    "userName": UserName,
+                    "longitude": longitude,
+                    "latitude": latitude
+                }
+            });
+
+            const timeElapsed = Date.now();
+            const today = new Date(timeElapsed);
+
+            status.textContent = today.toUTCString();
+        }
+
+        function error() {
+            status.textContent = "Unable to retrieve your location";
+        }
+
+        const options = {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 27000,
+        };
+
+        if (!navigator.geolocation) {
+            status.textContent = "Geolocation is not supported by your browser";
+        } else {
+            status.textContent = "Espere…";
+            navigator.geolocation.getCurrentPosition(success, error, options);
+        }
+    }
+
+    function Finalizar() {
+        window.location.replace("http://google.com");
+}
+
+</script>
