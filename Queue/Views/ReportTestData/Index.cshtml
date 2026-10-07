@@ -1,0 +1,37 @@
+﻿@model System.DateTime
+@using Queue.Models.Components
+@{
+    ViewBag.Title = "Datos de prueba para informes";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var form = new FormComponent {
+        Id = "report-test-data", Title = ViewBag.Title,
+        Description = "Empleado: " + ViewBag.EmployeeUser + ". Equipo: TEC-PRUEBA-FE78B48F. La carga genera dos horas de actividad y un inventario de ejemplo.",
+        ActionUrl = Url.Action("Load"), SubmitLabel = "Cargar datos de prueba", SingleColumn = true,
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new DateInput { Name = "date", Label = "Fecha de la actividad", Value = Model, Required = true, Help = "Usa esta misma fecha al filtrar el panel y los informes de actividad." }
+        }
+    };
+}
+<div class="space-y-6">
+    @if (ViewBag.Result != null) {
+        <p role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">@ViewBag.Result</p>
+    }
+    @if (ViewBag.ClassificationWarning != null) {
+        <p role="status" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">@ViewBag.ClassificationWarning</p>
+    }
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+    <section class="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        <h2 class="mb-3 font-semibold text-slate-800">Cómo revisar los informes</h2>
+        <ol class="list-decimal space-y-2 pl-5">
+            <li>En el panel, reporte de actividades y sumado de actividades, selecciona la fecha de la carga y este empleado. Usa todos los grupos inicialmente.</li>
+            <li>En reporte de software y hardware, busca el usuario o el equipo TEC-PRUEBA-FE78B48F y abre su detalle.</li>
+            <li>Si existen los tres tipos de clasificación, la muestra aporta 1 hora productiva, 30 minutos improductivos y 30 minutos neutrales. Los datos reales del empleado también aparecerán. En el reporte de actividades, los colores dependen además de las clasificaciones asignadas al grupo del empleado.</li>
+        </ol>
+        <p class="mt-4">Al repetir la carga se actualiza la misma muestra, incluida su fecha. La hora utiliza la zona horaria del servidor. No se generan capturas de pantalla ni se cambian los grupos del empleado.</p>
+        <form action="@Url.Action("Clear")" method="post" class="mt-5">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="rounded-xl border border-rose-200 px-4 py-2 font-medium text-rose-700 hover:bg-rose-50 focus:ring-4 focus:ring-rose-100">Eliminar los datos de prueba de este equipo</button>
+        </form>
+    </section>
+</div>

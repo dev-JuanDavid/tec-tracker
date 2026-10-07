@@ -1,154 +1,21 @@
 ﻿@model IEnumerable<Queue.ViewModels.UserListViewModel>
-
+@using Queue.Models.Components
+@using Queue.ViewModels
+@using System.Linq
 @{
-    ViewBag.Title = "Users Index";
+    ViewBag.Title = "Usuarios";
+    ViewBag.NavTitle = "Usuarios";
+    var table = TableComponent.From(Model ?? Enumerable.Empty<UserListViewModel>(),
+        new TableColumn<UserListViewModel> { Title = "Correo electrónico", Cell = user => TableCell.Text(user.Email) },
+        new TableColumn<UserListViewModel> { Title = "Nombre", Cell = user => TableCell.Text(user.FirstName) },
+        new TableColumn<UserListViewModel> { Title = "Sesión", Cell = user => TableCell.Badge(user.IsLoged ? "Conectado" : "Desconectado", user.IsLoged) },
+        new TableColumn<UserListViewModel> { Title = "Rol", Cell = user => TableCell.Text(user.Role == "SAdmin" ? "Superadministrador" : user.Role == "Admin" ? "Administrador" : user.Role == "Manager" ? "Responsable" : user.Role) },
+        new TableColumn<UserListViewModel> { Title = "Acciones", Cell = user => TableCell.Link("Editar", Url.Action("EditUser", "Manage", new { id = user.Id })) });
+    table.Id = "userTable";
+    table.Title = "Usuarios";
+    table.Description = "Administra los accesos y roles de los usuarios de tu empresa.";
+    table.CreateUrl = Url.Action("Register", "Account");
+    table.CreateLabel = "Nuevo usuario";
+    table.EmptyMessage = "Todavía no hay usuarios asociados a esta empresa.";
 }
-
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.tailwindcss.min.css" />
-
-<div class="flex flex-col space-y-4 max-w-6xl mx-auto p-6 bg-white rounded-2xl shadow-lg">
-
-    <!-- Encabezado -->
-    <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-semibold text-gray-800">Usuarios</h2>
-        <a href="@Url.Action("Register", "Account")"
-           class="btn_create flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow">
-            ➕ Nuevo Usuario
-        </a>
-    </div>
-
-    <!-- Tabla -->
-    <div class="bg-white rounded-lg shadow overflow-x-auto">
-        <table id="userTable" class="min-w-full text-sm text-left">
-            <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                    <th class="px-4 py-2 font-medium">Email</th>
-                    <th class="px-4 py-2 font-medium">Nombre</th>
-                    <th class="px-4 py-2 font-medium">Estado</th>
-                    <th class="px-4 py-2 font-medium">Rol</th>
-                    <th class="px-4 py-2 font-medium text-center">Editar</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                @foreach (var item in Model)
-                {
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Email)</td>
-                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.FirstName)</td>
-                        <td class="px-4 py-2">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                @(item.IsLoged ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
-                                @(item.IsLoged ? "Logged" : "False")
-                            </span>
-                        </td>
-                        <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Role)</td>
-                        <td class="px-4 py-2 text-center">
-                            <a href="@Url.Action("EditUser", "Manage", new { id = item.Id })"
-                               class="px-3 py-1 border rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-100 transition btn-edit">
-                                <!-- Heroicons lápiz -->
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M4 20h4.586a1 1 0 0 0 .707-.293l9.414-9.414a1 1 0 0 0 0-1.414L15.414 4.586a1 1 0 0 0-1.414 0L4 14.586V20z" />
-                                </svg>
-                            </a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- MODALES -->
-<div id="createModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg p-6 w-[40rem] max-h-[90vh] overflow-y-auto">
-        <div id="createModalContent"></div>
-        <div class="mt-4 flex justify-end">
-           
-        </div>
-    </div>
-</div>
-
-<div id="editModal" class="fixed inset-0 hidden bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-lg p-6 w-[40rem] max-h-[90vh] overflow-y-auto">
-        <div id="editModalContent"></div>
-        <div class="mt-4 flex justify-end">
-            
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            var table = $('#userTable').DataTable({
-                pageLength: 5,
-                lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "Todos"]],
-                dom: "<'flex items-center justify-between mb-4'<'flex items-center'l><'flex items-center'f>>" +
-                    "rt" +
-                    "<'flex items-center justify-between mt-4'<'text-sm'i><'flex items-center'p>>",
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: "Buscar...",
-                    lengthMenu: "Mostrar _MENU_ registros",
-                    info: "Página _PAGE_ de _PAGES_",
-                    infoEmpty: "Mostrando 0 a 0 de 0 registros",
-                    paginate: { first: "<<", last: ">>", next: "›", previous: "‹" }
-                },
-                initComplete: function () {
-                    var $searchInput = $('#userTable_filter input');
-                    $searchInput.addClass('px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500');
-                    var $lengthSelect = $('#userTable_length select');
-                    $lengthSelect.addClass('px-2 py-1 border rounded-lg');
-                    $('#userTable_info').addClass('text-sm text-gray-600');
-                },
-                drawCallback: function () {
-                    // Estilo de paginación circular con Tailwind
-                    $('#userTable_paginate .paginate_button').addClass(
-                        'px-3 py-1 border rounded-full hover:bg-indigo-100 transition'
-                    );
-                    $('#userTable_paginate .paginate_button.current').addClass(
-                        'bg-indigo-600 text-white border-indigo-600'
-                    );
-                    $('#userTable_paginate .paginate_button.disabled').addClass(
-                        'opacity-50 cursor-not-allowed'
-                    );
-                    $('#userTable_paginate').addClass('flex items-center space-x-2');
-                }
-            });
-
-            // MODAL CREATE
-            $(document).on('click', '.btn_create', function (e) {
-                e.preventDefault();
-                var url = $(this).attr('href');
-                $("#createModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
-                $("#createModal").removeClass("hidden");
-                $.get(url, function (data) {
-                    $("#createModalContent").html(data);
-                });
-            });
-
-            // MODAL EDIT
-            $(document).on('click', '.btn-edit', function (e) {
-                e.preventDefault();
-                var url = $(this).attr('href');
-                $("#editModalContent").html("<p class='text-center text-gray-600'>Cargando...</p>");
-                $("#editModal").removeClass("hidden");
-                $.get(url, function (data) {
-                    $("#editModalContent").html(data);
-                });
-            });
-        });
-
-        function closeCreateModal() {
-            $("#createModal").addClass("hidden");
-            $("#createModalContent").html("");
-        }
-
-        function closeEditModal() {
-            $("#editModal").addClass("hidden");
-            $("#editModalContent").html("");
-        }
-    </script>
-}
+@Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)

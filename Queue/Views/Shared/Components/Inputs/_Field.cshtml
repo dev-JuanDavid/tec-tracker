@@ -1,0 +1,23 @@
+﻿@model Queue.Models.Components.IFormInput
+@if (Model.Hidden)
+{
+    @Html.Partial(Model.EditorView, Model, new ViewDataDictionary(ViewData))
+}
+else
+{
+    <div class="min-w-0 space-y-2">
+        @if (Model.ShowLabel)
+        {
+            @Html.Label(Model.Name, Model.Label, new { @class = "block text-sm font-semibold text-slate-700" })
+            if (Model.Required) { <span class="text-xs text-slate-500">Obligatorio</span> }
+        }
+        @Html.Partial(Model.EditorView, Model, new ViewDataDictionary(ViewData))
+        @if (!string.IsNullOrWhiteSpace(Model.Help))
+        {
+            <p id="@(Html.Id(Model.Name))_help" class="text-xs leading-relaxed text-slate-500">@Model.Help</p>
+        }
+        <div id="@(Html.Id(Model.Name))_error" class="text-sm text-rose-600">
+            @Html.ValidationMessage(Model.Name)
+        </div>
+    </div>
+}

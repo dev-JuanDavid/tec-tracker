@@ -1,0 +1,8 @@
+﻿@model Queue.Models.Components.ChartComponent
+<section class="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+    <h2 id="@(Model.Id)_title" class="text-lg font-semibold text-slate-800">@Model.Title</h2>
+    <p class="mt-1 text-sm text-slate-500">@Model.Description</p>
+    <div id="@Model.Id" class="mt-4 min-h-[320px]" role="region" aria-labelledby="@(Model.Id)_title"></div>
+    <p id="@(Model.Id)_status" class="text-sm text-slate-500" role="status"></p>
+</section>
+

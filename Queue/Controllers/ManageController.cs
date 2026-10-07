@@ -376,6 +376,7 @@ namespace Queue.Controllers
         public ActionResult EditUser(string id)
         {
             var user = db.Users.Find(id);
+            if (user == null) return HttpNotFound();
             List<SelectListItem> RoleID = new List<SelectListItem>();
             var RolesNames = db.Roles.OrderBy(c => c.Name).ToList();
             foreach (var r in RolesNames)
@@ -388,7 +389,7 @@ namespace Queue.Controllers
             UserVm.LastName = user.LastName;
             UserVm.Email = user.Email;
             UserVm.IsLoged = user.IsLoged;
-            UserVm.RoleID = user.Roles.FirstOrDefault().RoleId;
+            UserVm.RoleID = user.Roles.Select(r => r.RoleId).FirstOrDefault();
 
 
             this.ViewBag.RoleID = new SelectList(RoleID, "Value", "Text", UserVm.RoleID);
@@ -399,10 +400,19 @@ namespace Queue.Controllers
         [HttpPost]
         [Authorize(Roles = "Admin,Manager")]
         [SessionAuthorize]
+        [ValidateAntiForgeryToken]
         public async Task<ActionResult> EditUser(RegisterViewModel user)
         {
 
             var oUser = db.Users.Find(user.UserId);
+            if (oUser == null) return HttpNotFound();
+            if (string.IsNullOrWhiteSpace(user.RoleID) || !db.Roles.Any(r => r.Id == user.RoleID))
+                ModelState.AddModelError("RoleID", "Selecciona un rol válido.");
+            if (!ModelState.IsValid)
+            {
+                ViewBag.RoleID = new SelectList(db.Roles.OrderBy(r => r.Name).ToList(), "Id", "Name", user.RoleID);
+                return View(user);
+            }
             oUser.FirstName = user.FirstName;
             oUser.LastName = user.LastName;
             oUser.IsLoged = user.IsLoged;
@@ -412,11 +422,12 @@ namespace Queue.Controllers
             await db.SaveChangesAsync();
 
             var RoleToAdd = db.Roles.Where(c => c.Id == user.RoleID).SingleOrDefault();
-            var x = oUser.Roles.FirstOrDefault().RoleId.ToString();
+            var x = oUser.Roles.Select(r => r.RoleId).FirstOrDefault();
             var RoleToRemove = db.Roles.Where(c => c.Id == x).SingleOrDefault();
 
 
-            await UserManager.RemoveFromRoleAsync(oUser.Id, RoleToRemove.Name);
+            if (RoleToRemove != null)
+                await UserManager.RemoveFromRoleAsync(oUser.Id, RoleToRemove.Name);
             await UserManager.AddToRoleAsync(oUser.Id, RoleToAdd.Name);
 
             string code = await UserManager.GeneratePasswordResetTokenAsync(oUser.Id);
@@ -424,6 +435,12 @@ namespace Queue.Controllers
             if (user.Password != null)
             {
                 IdentityResult result = await UserManager.ResetPasswordAsync(oUser.Id, code, user.Password);
+                if (!result.Succeeded)
+                {
+                    ModelState.AddModelError("Password", "No se pudo cambiar la contraseña. Comprueba que cumpla los requisitos de seguridad.");
+                    ViewBag.RoleID = new SelectList(db.Roles.OrderBy(r => r.Name).ToList(), "Id", "Name", user.RoleID);
+                    return View(user);
+                }
             }
 
             return RedirectToAction("UserList");

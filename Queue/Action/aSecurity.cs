@@ -23,7 +23,8 @@ namespace Queue.Action
 
         public object Login(object key)
         {
-            SaveDebugLog(key);
+            var requestId = System.Web.HttpContext.Current == null ? null : System.Web.HttpContext.Current.Items["RequestLogId"];
+            _log.InfoFormat("API Login: inicio; buscando empresa activa requestId={0}", requestId);
             ///cambios del dia 23/03/2019
             using (QueueContext ent = new QueueContext())
             {
@@ -32,12 +33,15 @@ namespace Queue.Action
                 try
                 {
                     Agent_Empresa ae = ent.Agent_Empresa.Where(a => a.Key == key && a.status == true).SingleOrDefault();
+                    _log.InfoFormat("API Login: empresa encontrada={0} requestId={1}", ae != null, requestId);
 
                     if (ae != null)
                     {
+                        _log.InfoFormat("API Login: comprobando licencia requestId={0}", requestId);
                         if (ent.License.Where(c => c.Agent_Empresa.IdCompany == ae.IdCompany && c.enddate >= DateTime.Today).Count() > 0)
                         {
                             var token = tvh.GenerateToken(ae.Nombre, ae.Rut, ae.IdCompany.ToString());
+                            _log.InfoFormat("API Login: token generado; cargando configuración requestId={0}", requestId);
                             ResponseConfigurationDTO responseConfigurationDTO = (from c in ent.Agent_Configuration
                                                                                  where c.Agent_Empresa.IdCompany == ae.IdCompany
                                                                                  select new ResponseConfigurationDTO
@@ -53,11 +57,12 @@ namespace Queue.Action
                                                                                  }).FirstOrDefault();
 
                             rp.data = responseConfigurationDTO;
+                            _log.InfoFormat("API Login: configuración encontrada={0} requestId={1}", responseConfigurationDTO != null, requestId);
                         }
                         else
                         {
                             response = autil.ReturnMesagge(ref rp, (int)GenericErrors.Licenceend, string.Empty, null);
-                            SaveDebugLog(response);
+                            _log.WarnFormat("API Login: licencia no vigente requestId={0}", requestId);
                             return response;
                         }
                     }
@@ -65,19 +70,19 @@ namespace Queue.Action
                     {
                         //login invalido
                         response = autil.ReturnMesagge(ref rp, (int)GenericErrors.ErrorLogin, string.Empty, null);
-                        SaveDebugLog(response);
+                        _log.WarnFormat("API Login: empresa no encontrada o inactiva requestId={0}", requestId);
                         return response;
                     }
 
                     //retorna un response, con el campo data lleno con la respuesta.
                     response = autil.ReturnMesagge(ref rp, (int)GenericErrors.OK, null, null, HttpStatusCode.OK);
-                    SaveDebugLog(response);
+                    _log.InfoFormat("API Login: respuesta OK requestId={0}", requestId);
                     return response;
                 }
                 catch (Exception ex)
                 {
                     response = autil.ReturnMesagge(ref rp, (int)GenericErrors.GeneralError, string.Empty, null, HttpStatusCode.InternalServerError);
-                    SaveDebugLog(response);
+                    _log.Error(string.Format("API Login: excepción requestId={0}", requestId), ex);
                     return response;
                     //error general
                 }

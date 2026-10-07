@@ -1,69 +1,20 @@
 ﻿@model IEnumerable<Queue.Models.Agent_EmployeesGroups>
-
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
-    ViewBag.Title = "Index";
+    ViewBag.Title = "Grupos de empleados";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var table = TableComponent.From(Model ?? Enumerable.Empty<Agent_EmployeesGroups>(),
+        new TableColumn<Agent_EmployeesGroups> { Title = "Nombre", Cell = group => TableCell.Text(group.Nombre) },
+        new TableColumn<Agent_EmployeesGroups> { Title = "Editar", Cell = group => TableCell.Link("Editar", Url.Action("Edit", "Agent_EmployeesGroups", new { id = group.idemployeesGroup })) },
+        new TableColumn<Agent_EmployeesGroups> { Title = "Eliminar", Cell = group => TableCell.Link("Eliminar", Url.Action("Delete", "Agent_EmployeesGroups", new { id = group.idemployeesGroup })) });
+    table.Title = "Grupos de empleados";
+    table.Description = "Organiza los equipos y administra sus integrantes.";
+    table.CreateUrl = Url.Action("Create", "Agent_EmployeesGroups");
+    table.CreateLabel = "Nuevo grupo";
+    table.EmptyMessage = "Crea un grupo para comenzar a organizar a tus empleados.";
 }
+@Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
 
-<div class="flex justify-center">
-    <div class="w-full">
-        <div class="bg-white shadow-md rounded-xl p-6">
-            <!-- Encabezado -->
-            <div class="flex items-center justify-between border-b pb-3 mb-4">
-                <h4 class="text-xl font-semibold text-gray-700">Grupos de Usuarios</h4>
-                <a href="@Url.Action("Create", "Agent_EmployeesGroups", new { id = ViewBag.IdGroupHorary })"
-                   class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg shadow flex items-center gap-2">
-                    <i class="fa fa-plus"></i> Nuevo Grupo
-                </a>
-            </div>
-
-            <!-- Tabla -->
-            <div class="overflow-x-auto">
-                <table id="myTable" class="min-w-full border border-gray-200 rounded-lg">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b">Nombre</th>
-                            <th class="px-4 py-2 text-center text-sm font-medium text-gray-600 border-b">Editar</th>
-                            <th class="px-4 py-2 text-center text-sm font-medium text-gray-600 border-b">Eliminar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-2 text-gray-700 border-b">
-                                    @Html.DisplayFor(modelItem => item.Nombre)
-                                </td>
-                                <td class="px-4 py-2 text-center border-b">
-                                    <a href="@Url.Action("Edit", "Agent_EmployeesGroups", new { id = item.idemployeesGroup })"
-                                       class="text-blue-600 hover:text-blue-800">
-                                        <i class="fa fa-edit"></i>
-                                    </a>
-                                </td>
-                                <td class="px-4 py-2 text-center border-b">
-                                    <a href="@Url.Action("Delete", "Agent_EmployeesGroups", new { id = item.idemployeesGroup })"
-                                       class="text-red-600 hover:text-red-800">
-                                        <i class="fa fa-trash"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
-    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
-    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
-    <script>
-        $('#myTable').DataTable();
-    </script>
-}

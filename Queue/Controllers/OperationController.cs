@@ -664,30 +664,20 @@ namespace Queue.Controllers
 
                 var _startTest = new DateTime(from.Year, from.Month, from.Day);
                 var _endTest = new DateTime(to.Year, to.Month, to.Day);
-                _endTest = _endTest.Add(new TimeSpan(23, 59, 59));
+                _endTest = _endTest.AddDays(1);
 
                 //var _startTest = new DateTime(2022, 02, 25);
                 //var _endTest = new DateTime(2022, 02, 25);
-                //_endTest = _endTest.Add(new TimeSpan(23, 59, 59));
+                //_endTest = _endTest.AddDays(1);
                 List<BasicStatsDashboard> queryPrincipal = new List<BasicStatsDashboard>();
 
                 List<string> users = new List<string>();
 
-                if (idgroup != null && idgroup != Guid.Empty)
-                {
-                    users = new List<string>();
-                    if (!string.IsNullOrEmpty(user) && user != Guid.Empty.ToString() && user != "Todos")
-                        users.Add(user.ToLower());
-                    else
-                        //users = db.Agent_EmployeeGroupsEmployee.Where(f => f.Agent_EmployeesGroups.idemployeesGroup == idgroup).Select(g => g.Agent_Employee.Usuario.ToLower()).ToList();
-                        users = db.WorkAreaEmployee.Where(f => f.IdWorkArea == idgroup).Select(g => g.employee.Usuario.ToLower()).ToList();
-                }
-                if (!string.IsNullOrEmpty(user) && user != Guid.Empty.ToString() && user != "Todos" && idgroup == null && idgroup == Guid.Empty)
-                    users.Add(user.ToLower());
+                users = ResolveActivityUsers(idempresa, new[] { user }, idgroup);
 
 
                 queryPrincipal = MongoHelper.database.GetCollection<AutomaticTakeTimeModel>("TrackerTime").AsQueryable<AutomaticTakeTimeModel>().
-                    Where(e => e.IdEmpresa == idcompany && (e.FocusTime >= _startTest && e.FocusTime <= _endTest))
+                    Where(e => e.IdEmpresa == idcompany && (e.FocusTime >= _startTest && e.FocusTime < _endTest))
                     .Select(e =>
                                new BasicStatsDashboard
                                {
@@ -699,13 +689,13 @@ namespace Queue.Controllers
 
 
                 //foltra por usuario o usuarios
-                if (users.Count() > 0)
-                    queryPrincipal = queryPrincipal.Where(v => users.Contains(v.User.ToLower())).ToList();
+                if (users != null)
+                    queryPrincipal = queryPrincipal.Where(v => v.User != null && users.Contains(v.User.Trim().ToLowerInvariant())).ToList();
 
 
                 foreach (var j in queryPrincipal)
                 {
-                    j.Clasification = clasifications.Where(t => t.name == j.Application).Select(s => s.clasification).SingleOrDefault();
+                    j.Clasification = clasifications.Where(t => string.Equals(t.name, j.Application, StringComparison.OrdinalIgnoreCase)).OrderBy(t => t.idprogramclasification).Select(s => s.clasification).FirstOrDefault();
                 }
 
                 queryPrincipal = queryPrincipal.OrderBy(o => o.Date_).ToList();
@@ -788,25 +778,37 @@ namespace Queue.Controllers
         }
 
 
-        public async Task<List<UsersReportGanttModel>> GetactivityData(string idcompany, DateTime fromdate, DateTime todate, int periods, string[] user)
+        private List<string> ResolveActivityUsers(Guid company, string[] requested, Guid group)
         {
-            if (periods == 0) { periods = 5 * 60; }
+            var selected = (requested ?? new string[0]).Where(name => !string.IsNullOrWhiteSpace(name) && name != Guid.Empty.ToString() && !string.Equals(name, "Todos", StringComparison.OrdinalIgnoreCase))
+                .Select(name => name.Trim().ToLowerInvariant()).Distinct().ToList();
+            if (group == Guid.Empty && selected.Count == 0) return null;
+            var employees = db.Agent_Employee.Where(employee => employee.IdCompany == company);
+            if (group != Guid.Empty)
+                employees = employees.Where(employee => employee.WorkAreaEmployees.Any(assignment => assignment.IdWorkArea == group));
+            var names = employees.Select(employee => employee.Usuario).ToList().Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim().ToLowerInvariant()).Distinct().ToList();
+            return selected.Count == 0 ? names : names.Intersect(selected).ToList();
+        }
+
+        public async Task<List<UsersReportGanttModel>> GetactivityData(string idcompany, DateTime fromdate, DateTime todate, int periods, string[] user, Guid idgroup = default(Guid))
+        {
+                if (periods == 0) { periods = 5; }
 
             var _queryFiltre = MongoHelper.database.GetCollection<AutomaticTakeTimeModel>("TrackerTime").AsQueryable<AutomaticTakeTimeModel>()
                 .Where(e => e.IdEmpresa == idcompany);
 
             List<string> filterusers = new List<string>();
-            filterusers = user.ToList();
+            filterusers = ResolveActivityUsers(Guid.Parse(idcompany), user, idgroup);
 
             // Filtrar por multiusuario, excepto si viene la palabra "Todos"
-            if (!filterusers.Contains("Todos"))
-                _queryFiltre = _queryFiltre.Where(x => filterusers.Contains(x.UserName));
+            if (filterusers != null)
+                _queryFiltre = _queryFiltre.Where(x => x.UserName != null && filterusers.Contains(x.UserName.ToLower()));
 
             var _startTest = new DateTime(fromdate.Year, fromdate.Month, fromdate.Day);
             var _endTest = new DateTime(todate.Year, todate.Month, todate.Day);
-            _endTest = _endTest.Add(new TimeSpan(23, 59, 59));
+            _endTest = _endTest.AddDays(1);
 
-            _queryFiltre = _queryFiltre.Where(s => s.FocusTime >= _startTest && s.FocusTime <= _endTest);
+            _queryFiltre = _queryFiltre.Where(s => s.FocusTime >= _startTest && s.FocusTime < _endTest);
 
             var queryPrincipal = _queryFiltre
                 .GroupBy(e => e.UserName)
@@ -824,9 +826,10 @@ namespace Queue.Controllers
                            }).ToList();
 
             var guidIdcompany = Guid.Parse(idcompany);
+            var reportUsers = queryPrincipal.Where(u => u.UserName != null).Select(u => u.UserName.ToLower()).ToList();
             var WorkAreaEmployeeList = db.Agent_Employee
                     .Include(e => e.WorkAreaEmployees)
-                    .Where(t => t.IdCompany == guidIdcompany && filterusers.Contains(t.Usuario))
+                    .Where(t => t.IdCompany == guidIdcompany && reportUsers.Contains(t.Usuario.ToLower()))
                     .SelectMany(e => e.WorkAreaEmployees.Select(wa => wa.IdWorkArea))
                     .ToList();
 
@@ -1540,12 +1543,17 @@ namespace Queue.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult EditParameterSystem(ParameterSystem paramater)
         {
+            var companyId = Guid.Parse(Session["Company"].ToString());
+            var configuracion = db.Agent_Configuration.FirstOrDefault(t => t.Id_Configuration == paramater.Id_Configuration && t.IdCompany == companyId);
+            if (configuracion == null) return HttpNotFound();
+            paramater.IdCompany = companyId;
+            paramater.Company = db.Agent_Empresa.Where(c => c.IdCompany == companyId).Select(c => c.Nombre).FirstOrDefault();
+            if (!ModelState.IsValid) return View(paramater);
             try
             {
                 if (ModelState.IsValid)
                 {
 
-                    var configuracion = db.Agent_Configuration.Where(t => t.Id_Configuration == paramater.Id_Configuration).FirstOrDefault();
                     configuracion.InactivityPeriod = paramater.InactivityPeriod;
                     configuracion.CaptureFrecuency = paramater.CaptureFrecuency;
                     configuracion.UploadFrecuency = paramater.UploadFrecuency;
@@ -1554,12 +1562,13 @@ namespace Queue.Controllers
                     db.SaveChanges();
                 }
 
-                return View("ParameterSystem");
+                Success("Parámetros actualizados correctamente.");
+                return RedirectToAction("ParameterSystem");
             }
             catch (Exception ex)
             {
                 Warning("Error en la actualización de datos.", string.Empty);
-                return View();
+                return View(paramater);
             }
 
         }
@@ -1581,7 +1590,7 @@ namespace Queue.Controllers
                     var builder = Builders<InstalledProgramsViewModel>.Filter;
 
                     // Filtro base: por empresa y activos
-                    var filter = builder.Eq("IdCompany", IdCompany) & builder.Eq("Status", true);
+                    var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) & builder.Eq(x => x.Status, true);
                     List<InstalledProgramsViewModel> results = MongoHelper.SoftWareList.Find(filter).ToList();
 
                     // ✅ Si se seleccionó un grupo
@@ -1685,8 +1694,8 @@ namespace Queue.Controllers
 
                 MongoHelper.SoftWareList = MongoHelper.database.GetCollection<InstalledProgramsViewModel>("Software");
                 var builder = Builders<InstalledProgramsViewModel>.Filter;
-                var filter = builder.Eq("IdCompany", IdCompany) &
-                             builder.Eq("Status", true) &
+                var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) &
+                             builder.Eq(x => x.Status, true) &
                              builder.Eq("Name", name);
 
                 List<InstalledProgramsViewModel> results = MongoHelper.SoftWareList.Find(filter).ToList();
@@ -1825,7 +1834,7 @@ namespace Queue.Controllers
             {
                 MongoHelper.HardWareList = MongoHelper.database.GetCollection<InstalledHardwareViewModel>("Hardware");
                 var builder = Builders<InstalledHardwareViewModel>.Filter;
-                var filter = builder.Eq("IdCompany", IdCompany) &
+                var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) &
                              builder.Eq("status", true) &
                              builder.Eq("Hardware", hardware);
 
@@ -2018,11 +2027,13 @@ namespace Queue.Controllers
         {
             try
             {
-                return View();
+                var companyId = Guid.Parse(Session["Company"].ToString());
+                return View(GetParameterSystemBd(companyId));
             }
             catch (Exception)
             {
-                return View();
+                Warning("No se pudieron cargar los parámetros del sistema.", string.Empty);
+                return View(new List<ParameterSystem>());
             }
         }
 
@@ -2100,6 +2111,8 @@ namespace Queue.Controllers
             return View(datos);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult TimePerActivity(TimePerActivityViewModel activity)
         {
             Guid company = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
@@ -2111,8 +2124,14 @@ namespace Queue.Controllers
                 activity.to = DateTime.Today;
 
 
-            List<BasicStatsDashboard> data = GetDataForDashBoard(company.ToString(), activity.from, activity.to, activity.user, activity.idgruoup);
+            if (activity.from.Date > activity.to.Date)
+                ModelState.AddModelError("to", "La fecha final debe ser igual o posterior a la inicial.");
+            List<BasicStatsDashboard> data = ModelState.IsValid ? GetDataForDashBoard(company.ToString(), activity.from, activity.to, activity.user, activity.idgruoup) : new List<BasicStatsDashboard>();
             TimePerActivityViewModel datos = new TimePerActivityViewModel();
+            datos.from = activity.from;
+            datos.to = activity.to;
+            datos.user = activity.user;
+            datos.idgruoup = activity.idgruoup;
             if (data.Count() > 0)
             {
                 foreach (var i in data.GroupBy(g => g.Application))

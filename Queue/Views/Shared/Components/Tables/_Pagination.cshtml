@@ -1,0 +1,24 @@
+﻿@model Queue.Models.Components.TableComponent
+@using Queue.Models.Components
+@if (Model.EnablePagination)
+{
+    <footer class="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 border-t border-slate-100 bg-[#6d5fb9]/5 px-6 py-3 text-sm text-slate-600">
+        <div class="flex items-center gap-2">
+            @Html.Label(Model.Id + "_size", "Elementos por página")
+            @Html.Partial("~/Views/Shared/Components/Inputs/_Select.cshtml", new SelectInput {
+                Name = Model.Id + "_size", Value = Model.PageSize, EmptyLabel = null,
+                Options = new[] { new SelectListItem { Value = "5", Text = "5" }, new SelectListItem { Value = "10", Text = "10" }, new SelectListItem { Value = "25", Text = "25" }, new SelectListItem { Value = "50", Text = "50" }, new SelectListItem { Value = "-1", Text = "Todos" } }
+            })
+        </div>
+        <p data-table-info role="status" aria-live="polite"></p>
+        <nav class="flex items-center gap-2" aria-label="Paginación de registros">
+            @foreach (var action in new[] { "first", "previous", "next", "last" })
+            {
+                var label = action == "first" ? "Primera página" : action == "previous" ? "Página anterior" : action == "next" ? "Página siguiente" : "Última página";
+                var symbol = action == "first" ? "|‹" : action == "previous" ? "‹" : action == "next" ? "›" : "›|";
+                <button type="button" data-page-action="@action" aria-label="@label" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-2xl text-slate-500 hover:bg-[#6d5fb9]/10 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20 disabled:cursor-default disabled:opacity-40"><span aria-hidden="true">@symbol</span></button>
+            }
+        </nav>
+    </footer>
+}
+

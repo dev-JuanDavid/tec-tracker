@@ -15,33 +15,33 @@ namespace Queue.Models
 
         public Guid IdCompany { get; set; }
 
-        [DisplayName("Name")]
-        [Required]
+        [DisplayName("Nombre")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public string Nombre { get; set; }
 
-        [DisplayName("Address")]
-        [Required]
+        [DisplayName("Dirección")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public string Direccion { get; set; }
 
-        [DisplayName("Phone")]
-        [Required]
+        [DisplayName("Teléfono")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public string Telefono { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public string Email { get; set; }
 
-        [DisplayName("Identification")]
-        [Required]
+        [DisplayName("Identificación")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public string Identificacion { get; set; }
 
-        [DisplayName("Username")]
-        [Required]
+        [DisplayName("Usuario")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public string Usuario { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
         public Guid Cargo { get; set; }
 
-        [DisplayName("Status")]
+        [DisplayName("Estado")]
         public bool status { get; set; } = true;
         public string string_status { get; set; }
 
@@ -60,11 +60,11 @@ namespace Queue.Models
         public string posibleerror { get; set; }
 
         [NotMapped]
-        [DisplayName("Work Area")]
+        [DisplayName("Grupo de empleados")]
         public int IdWorkArea { get; set; }
 
         [NotMapped]
-        [DisplayName("Work Area")]
+        [DisplayName("Grupo de empleados")]
         public Guid IdEmployeesGroup { get; set; }
 
         [ForeignKey("Agent_GroupHorary")]

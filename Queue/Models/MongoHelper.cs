@@ -30,9 +30,9 @@ namespace Queue.Models
                 client = new MongoClient(MongoConnection);
                 database = client.GetDatabase(MongoDatabase);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw ex;
+                throw;
             }
         }
     }

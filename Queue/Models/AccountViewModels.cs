@@ -66,27 +66,27 @@ namespace Queue.Models
     public class RegisterViewModel
     {
         public string UserId { get; set; }
-        [Required]
-        [EmailAddress]
-        [Display(Name = "Email")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
+        [EmailAddress(ErrorMessage = "Ingresa un correo electrónico válido.")]
+        [Display(Name = "Correo electrónico")]
         public string Email { get; set; }
 
        
         [DataType(DataType.Password)]
-        [Display(Name = "Password")]
+        [Display(Name = "Contraseña")]
         public string Password { get; set; }
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirm password")]
-        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        [Display(Name = "Confirmar contraseña")]
+        [Compare("Password", ErrorMessage = "La contraseña y su confirmación no coinciden.")]
         public string ConfirmPassword { get; set; }
 
-        [Required]
-        [Display(Name = "First Name")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
+        [Display(Name = "Nombre")]
         public string FirstName { get; set; }
 
-        [Required]
-        [Display(Name = "Last Name")]
+        [Required(ErrorMessage = "Este campo es obligatorio.")]
+        [Display(Name = "Apellido")]
         public string LastName { get; set; }
 
         public Boolean IsLoged { get; set; }

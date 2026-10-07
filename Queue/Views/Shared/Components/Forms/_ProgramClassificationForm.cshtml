@@ -1,0 +1,40 @@
+﻿@model Queue.Models.Agent_ProgramClasification
+@using Queue.Models.Components
+@using System.Linq
+@{
+    var editing = Model != null && Model.idprogramclasification != Guid.Empty;
+    var inputs = new System.Collections.Generic.List<IFormInput>();
+    if (editing) {
+        inputs.Add(new HiddenInput { Name = "idprogramclasification", Value = Model.idprogramclasification });
+        inputs.Add(new HiddenInput { Name = "name", Value = Model.name });
+    } else {
+        inputs.Add(new SelectInput { Name = "name", Label = "Programa", Options = ViewBag.name as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>(), Value = Model == null ? null : Model.name, Required = true, EmptyLabel = "Selecciona un programa" });
+    }
+    inputs.Add(new SelectInput {
+        Name = "clasification", Label = "Clasificación", Value = Model != null && Model.clasification > 0 ? Model.clasification : 1, EmptyLabel = null,
+        Options = new[] { new SelectListItem { Value = "1", Text = "Productiva" }, new SelectListItem { Value = "2", Text = "Improductiva" }, new SelectListItem { Value = "3", Text = "Neutral" } }
+    });
+    inputs.Add(new SelectInput {
+        Name = "isLicensed", Label = "Licencia", Value = Model != null && Model.isLicensed ? "True" : "False", EmptyLabel = null,
+        Options = new[] { new SelectListItem { Value = "True", Text = "Con licencia" }, new SelectListItem { Value = "False", Text = "Sin licencia" } }
+    });
+    inputs.Add(new TextInput { Name = "licenseNumber", Label = "Número de licencia", Value = Model == null ? null : Model.licenseNumber, Help = "Completa este campo si el programa tiene licencia." });
+    var form = new FormComponent {
+        Id = "classification-form", Title = editing ? "Editar clasificación" : "Nueva clasificación",
+        Description = editing ? "Programa: " + Model.name : "Define la clasificación del programa y los datos de su licencia.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Agent_ProgramClasification"),
+        CancelUrl = Url.Action("Index", "Agent_ProgramClasification"), SubmitLabel = editing ? "Guardar cambios" : "Crear clasificación", Inputs = inputs
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+<script>
+(function () {
+    var form = document.getElementById('classification-form');
+    var licensed = form.querySelector('[name="isLicensed"]');
+    var number = form.querySelector('[name="licenseNumber"]');
+    function update() { number.disabled = licensed.value !== 'True'; }
+    licensed.addEventListener('change', update);
+    update();
+})();
+</script>
+

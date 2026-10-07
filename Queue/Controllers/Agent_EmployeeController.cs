@@ -365,7 +365,7 @@ namespace Queue.Controllers
 
                         
 
-                        if (agent_Employee.IdEmployeesGroup != null || agent_Employee.IdEmployeesGroup != Guid.Empty)
+                        if (agent_Employee.IdEmployeesGroup != Guid.Empty)
                         {
                             var workAreaEmployee = db.WorkAreaEmployee.Where(w => w.idEmployee == agent_Employee.idEmployee).ToList();
                             if (!workAreaEmployee.Any())
@@ -393,6 +393,11 @@ namespace Queue.Controllers
 
                             db.SaveChanges();
                             
+                        }
+                        else
+                        {
+                            var assignments = db.WorkAreaEmployee.Where(w => w.idEmployee == agent_Employee.idEmployee).ToList();
+                            db.WorkAreaEmployee.RemoveRange(assignments);
                         }
 
                         // Busca si el nombre de usuario se encuentra notificado como no parametrizado

@@ -1,91 +1,23 @@
 ﻿@model Queue.Models.ParameterSystem
-
+@using Queue.Models.Components
 @{
+    ViewBag.Title = "Editar parámetros del sistema";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var form = new FormComponent {
+        Id = "system-parameters-form", Title = "Editar parámetros del sistema",
+        Description = "Empresa: " + Model.Company + ". Configura los intervalos de operación del agente.",
+        ActionUrl = Url.Action("EditParameterSystem", "Operation"), CancelUrl = Url.Action("ParameterSystem", "Operation"),
+        SubmitLabel = "Guardar parámetros",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "Id_Configuration", Value = Model.Id_Configuration },
+            new HiddenInput { Name = "IdCompany", Value = Model.IdCompany },
+            new NumberInput { Name = "InactivityPeriod", Label = "Período de inactividad", Value = Model.InactivityPeriod, Required = true, Min = "0", Step = "1", Help = "Tiempo de inactividad, expresado en segundos." },
+            new NumberInput { Name = "CaptureFrecuency", Label = "Frecuencia de capturas", Value = Model.CaptureFrecuency, Required = true, Min = "0", Step = "1", Help = "Intervalo entre capturas de pantalla, expresado en segundos." },
+            new NumberInput { Name = "UploadFrecuency", Label = "Frecuencia de envío de datos", Value = Model.UploadFrecuency, Required = true, Min = "0", Step = "1", Help = "Intervalo de envío de datos, expresado en segundos." },
+            new NumberInput { Name = "LocationFrecuency", Label = "Frecuencia de ubicación", Value = Model.LocationFrecuency, Required = true, Min = "0", Step = "1", Help = "Intervalo de actualización de ubicación, expresado en minutos." }
+        }
+    };
 }
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 
-@using (Html.BeginForm("EditParameterSystem", "Operation", FormMethod.Post, new { id = "frm_register" }))
-{
-    @Html.AntiForgeryToken()
-    @Html.HiddenFor(m => m.Id_Configuration)
-    @Html.HiddenFor(m => m.IdCompany)
-
-    <div id="divblock" class="flex justify-center">
-        <div class="w-full">
-            <div class="bg-white rounded-2xl shadow p-6">
-                <!-- Header -->
-                <div class="flex justify-between items-center border-b pb-4 mb-6">
-                    <h4 class="text-xl font-semibold text-gray-700">
-                        Editar parámetros de la empresa
-                        <span class="font-bold text-blue-600">@Model.Company</span>
-                    </h4>
-                    <a href="@Url.Action("ParameterSystem", "Operation")"
-                       class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg shadow">
-                        ← Back
-                    </a>
-                </div>
-
-                <!-- Form Fields -->
-                <div class="space-y-6">
-                    <!-- Inactivity Period -->
-                    <div>
-                        @Html.LabelFor(model => model.InactivityPeriod,
-                            htmlAttributes: new { @class = "block text-sm font-medium text-gray-700" })
-                        @Html.ValidationMessageFor(model => model.InactivityPeriod, "",
-                            new { @class = "text-red-500 text-xs" })
-                        @Html.EditorFor(model => model.InactivityPeriod,
-                            new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2" } })
-                    </div>
-
-                    <!-- Capture Frecuency -->
-                    <div>
-                        @Html.LabelFor(model => model.CaptureFrecuency,
-                            htmlAttributes: new { @class = "block text-sm font-medium text-gray-700" })
-                        @Html.ValidationMessageFor(model => model.CaptureFrecuency, "",
-                            new { @class = "text-red-500 text-xs" })
-                        @Html.EditorFor(model => model.CaptureFrecuency,
-                            new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2" } })
-                    </div>
-
-                    <!-- Upload Frecuency -->
-                    <div>
-                        @Html.LabelFor(model => model.UploadFrecuency,
-                            htmlAttributes: new { @class = "block text-sm font-medium text-gray-700" })
-                        @Html.ValidationMessageFor(model => model.UploadFrecuency, "",
-                            new { @class = "text-red-500 text-xs" })
-                        @Html.EditorFor(model => model.UploadFrecuency,
-                            new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2" } })
-                    </div>
-
-                    <!-- Location Frecuency -->
-                    <div>
-                        @Html.LabelFor(model => model.LocationFrecuency,
-                            htmlAttributes: new { @class = "block text-sm font-medium text-gray-700" })
-                        @Html.ValidationMessageFor(model => model.LocationFrecuency, "",
-                            new { @class = "text-red-500 text-xs" })
-                        @Html.EditorFor(model => model.LocationFrecuency,
-                            new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2" } })
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex justify-end mt-8">
-                    <button id="edit" name="add_dictionary" type="submit" value="Create"
-                            class="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg shadow">
-                        Edit
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="~/Scripts/jquery-3.4.1.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            var status = '@ViewBag.status';
-            if (status == "False") {
-                $("#string_status").val("Inactive");
-            }
-        });
-    </script>
-}

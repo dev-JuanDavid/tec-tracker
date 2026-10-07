@@ -1,0 +1,27 @@
+﻿@model Queue.Models.Agent_Job
+@using Queue.Models.Components
+@{
+    var editing = Model != null && Model.idJob != Guid.Empty;
+    var inputs = new System.Collections.Generic.List<IFormInput> {
+        new TextInput { Name = "Cargo", Label = "Nombre del cargo", Value = Model == null ? null : Model.Cargo, Required = true, Placeholder = "Ej. Analista de soporte", Autocomplete = "off" },
+        new TextAreaInput { Name = "Descripcion", Label = "Descripción", Value = Model == null ? null : Model.Descripcion, Required = true, Placeholder = "Describe las responsabilidades principales" }
+    };
+    if (editing) {
+        inputs.Add(new HiddenInput { Name = "idJob", Value = Model.idJob });
+        inputs.Add(new SelectInput {
+            Name = "string_status", Label = "Estado", Value = Model.status ? "Active" : "Inactive", EmptyLabel = null,
+            Options = new[] { new SelectListItem { Value = "Active", Text = "Activo" }, new SelectListItem { Value = "Inactive", Text = "Inactivo" } }
+        });
+    }
+    var form = new FormComponent {
+        Id = "job-form",
+        Title = editing ? "Editar cargo" : "Nuevo cargo",
+        Description = "Define el cargo y sus responsabilidades dentro de tu empresa.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Agent_Job"),
+        CancelUrl = Url.Action("Index", "Agent_Job"),
+        SubmitLabel = editing ? "Guardar cambios" : "Crear cargo",
+        Inputs = inputs
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+

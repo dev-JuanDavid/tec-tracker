@@ -1,0 +1,16 @@
+﻿@model Queue.Models.Components.DetailComponent
+<section class="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+    <h1 class="text-xl font-semibold text-slate-800">@Model.Title</h1>
+    <p class="mt-2 text-sm text-slate-500">@Model.Description</p>
+    <dl class="mt-6 grid gap-6 sm:grid-cols-2">
+        @foreach (var field in Model.Fields) {
+            <div><dt class="text-sm font-medium text-slate-500">@field.Label</dt><dd class="mt-2 break-words text-sm text-slate-800">@field.Value</dd></div>
+        }
+    </dl>
+    <footer class="mt-8 flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+        @foreach (var action in Model.Actions) {
+            <a href="@action.Url" class="rounded-xl border border-[#6d5fb9]/20 px-4 py-2.5 text-sm font-semibold text-[#6d5fb9] hover:bg-[#6d5fb9]/10 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">@action.Value</a>
+        }
+    </footer>
+</section>
+

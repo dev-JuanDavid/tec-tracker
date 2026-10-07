@@ -1,0 +1,3 @@
+﻿@model Queue.Models.Components.FileInput
+@{ var attributes = Queue.Models.Components.InputAttributes.For(Html, Model); }
+@Html.TextBox(Model.Name, null, attributes)

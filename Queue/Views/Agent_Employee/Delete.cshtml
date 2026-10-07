@@ -1,47 +1,26 @@
 ﻿@model Queue.Models.Agent_Employee
-
+@using Queue.Models.Components
 @{
-    Layout = null; // no cargamos el layout dentro del modal
+    ViewBag.Title = "Eliminar empleado";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var detail = new DetailComponent {
+        Title = "Datos del empleado",
+        Fields = new System.Collections.Generic.List<DetailField> {
+            new DetailField { Label = "Nombre", Value = Model.Nombre },
+            new DetailField { Label = "Identificación", Value = Model.Identificacion },
+            new DetailField { Label = "Correo electrónico", Value = Model.Email },
+            new DetailField { Label = "Usuario", Value = Model.Usuario }
+        }
+    };
+    var form = new FormComponent {
+        Id = "delete-employee-form", Title = "Confirmar eliminación", Description = "Se eliminará el registro del empleado. Esta acción no se puede deshacer.",
+        ActionUrl = Url.Action("Delete", "Agent_Employee"), CancelUrl = Url.Action("Index", "Agent_Employee"),
+        SubmitLabel = "Eliminar empleado", Inputs = new System.Collections.Generic.List<IFormInput> { new HiddenInput { Name = "id", Value = Model.idEmployee } }
+    };
 }
-
 <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center space-x-3">
-        <div class="flex items-center justify-center w-12 h-12 bg-red-100 text-red-600 rounded-full">
-            <!-- Heroicon Trash -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4" />
-            </svg>
-        </div>
-        <h2 class="text-xl font-bold text-gray-800">Confirmar eliminación</h2>
-    </div>
-
-    <!-- Mensaje -->
-    <p class="text-gray-600">
-        Estás a punto de eliminar este usuario. Esta acción no se puede deshacer.
-        ¿Quieres continuar?
-    </p>
-
-    <!-- Info del usuario -->
-    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
-        <p><span class="font-medium text-gray-700">🆔 Identificación:</span> @Model.Identificacion</p>
-        <p><span class="font-medium text-gray-700">👤 Nombre:</span> @Model.Nombre</p>
-        <p><span class="font-medium text-gray-700">📧 Correo:</span> @Model.Email</p>
-        <p><span class="font-medium text-gray-700">🔑 Usuario:</span> @Model.Usuario</p>
-    </div>
-
-    <!-- Botones -->
-    <div class="flex justify-end space-x-3">
-        <button type="button" onclick="closeDeleteModal()"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium rounded-lg transition">
-            ✖ Cancelar
-        </button>
-
-        <form asp-action="DeleteConfirmed" asp-route-id="@Model.idEmployee" method="post">
-            <button type="submit"
-                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow transition">
-                🗑️ Eliminar definitivamente
-            </button>
-        </form>
-    </div>
+    @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 </div>
+

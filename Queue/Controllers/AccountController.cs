@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
+using log4net;
 using Microsoft.Owin.Security;
 using Queue.DAL;
 using Queue.Models;
@@ -15,6 +16,7 @@ namespace Queue.Controllers
     [Authorize]
     public class AccountController : BaseController
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(AccountController));
         private QueueContext db = new QueueContext();
         private ApplicationSignInManager _signInManager;
         private ApplicationUserManager _userManager;
@@ -60,6 +62,8 @@ namespace Queue.Controllers
         [AllowAnonymous]
         public ActionResult Login(string returnUrl)
         {
+            Log.InfoFormat("Login: formulario solicitado authenticated={0} requestId={1}",
+                User.Identity.IsAuthenticated, HttpContext.Items["RequestLogId"]);
             ViewBag.ReturnUrl = returnUrl;
             return View();
         }
@@ -70,35 +74,50 @@ namespace Queue.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> Login(LoginViewModel model, string returnUrl)
         {
+            var requestId = HttpContext.Items["RequestLogId"];
+            Log.InfoFormat("Login: intento recibido requestId={0}", requestId);
             if (!ModelState.IsValid)
             {
+                Log.WarnFormat("Login: formulario inválido requestId={0}", requestId);
                 return View(model);
             }
 
             // This doesn't count login failures towards account lockout
             // To enable password failures to trigger account lockout, change to shouldLockout: true
             //var result = await SignInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, shouldLockout: false);
+            Log.InfoFormat("Login: inicio de búsqueda del usuario requestId={0}", requestId);
             ApplicationUser signedUser = UserManager.FindByEmail(model.Email);
+            Log.InfoFormat("Login: búsqueda completada found={0} firstName={1} requestId={2}",
+                signedUser != null, signedUser == null ? null : signedUser.FirstName, requestId);
 
             if (signedUser != null)
             {
+                Log.InfoFormat("Login: inicio de comprobación de credenciales requestId={0}", requestId);
                 var result = await SignInManager.PasswordSignInAsync(signedUser.UserName, model.Password, model.RememberMe, shouldLockout: false);
+                Log.InfoFormat("Login: resultado de autenticación={0} requestId={1}", result, requestId);
                 switch (result)
                 {
                     case SignInStatus.Success:
+                        Log.InfoFormat("Login: cargando usuario y empresa requestId={0}", requestId);
                         var oUser = await db.Users.Where(u => u.Email == model.Email).SingleOrDefaultAsync();
+                        Log.InfoFormat("Login: usuario de sesión encontrado={0} requestId={1}", oUser != null, requestId);
                         var id = Guid.Parse(oUser.Id);
 
                         var ucompany = db.Agent_UserCompany.Where(uc => uc.idUser == id).FirstOrDefault();
+                        Log.InfoFormat("Login: asociación con empresa encontrada={0} requestId={1}", ucompany != null, requestId);
 
                         var company = ucompany.IdCompany.ToString();
 
+                        Log.InfoFormat("Login: comprobando licencia vigente requestId={0}", requestId);
                         if (db.License.Where(c => c.Agent_Empresa.IdCompany == ucompany.IdCompany && c.enddate >= DateTime.Today).Count() > 0)
                         {
+                            Log.InfoFormat("Login: licencia vigente; guardando estado del usuario requestId={0}", requestId);
                             oUser.IsLoged = true;
                             await db.SaveChangesAsync();
+                            Log.InfoFormat("Login: estado guardado; cargando roles requestId={0}", requestId);
 
                             var role = UserManager.GetRoles(oUser.Id);
+                            Log.InfoFormat("Login: roles cargados count={0}; creando sesión requestId={1}", role.Count, requestId);
                             Session["Email"] = oUser.Email;
                             Session["Name"] = oUser.FirstName + " " + oUser.LastName;
                             Session["UserId"] = oUser.Id;
@@ -106,11 +125,13 @@ namespace Queue.Controllers
                             Session["InsuredKey"] = Guid.NewGuid().ToString();
                             Session["Company"] = company;
 
+                            Log.InfoFormat("Login: sesión iniciada; redirección a Home/Index requestId={0}", requestId);
                             return RedirectToAction("Index", "Home");
                         }
                         else
                         {
                             ModelState.AddModelError("", "Licencia vencida, comuniquese con un administrador");
+                            Log.WarnFormat("Login: acceso rechazado por falta de licencia vigente requestId={0}", requestId);
                             return View(model);
                         }
 
@@ -139,11 +160,12 @@ namespace Queue.Controllers
                         return RedirectToAction("SendCode", new { ReturnUrl = returnUrl, RememberMe = model.RememberMe });
                     case SignInStatus.Failure:
                     default:
-                        ModelState.AddModelError("", "Invalid login attempt.");
+                        ModelState.AddModelError("", "El correo electrónico o la contraseña no son válidos.");
                         return View(model);
                 }
             }
-            ModelState.AddModelError("", "Invalid login attempt.");
+            Log.WarnFormat("Login: usuario no encontrado requestId={0}", requestId);
+            ModelState.AddModelError("", "El correo electrónico o la contraseña no son válidos.");
             return View(model);
         }
 
@@ -225,6 +247,13 @@ namespace Queue.Controllers
         {
             Guid idcompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
             model.Password = System.Web.Security.Membership.GeneratePassword(8, 1);
+            if (string.IsNullOrWhiteSpace(model.RoleID) || !db.Roles.Any(r => r.Id == model.RoleID && r.Name != "SAdmin"))
+                ModelState.AddModelError("RoleID", "Selecciona un rol válido.");
+            if (!ModelState.IsValid)
+            {
+                ViewBag.RoleID = new SelectList(db.Roles.Where(r => r.Name != "SAdmin").OrderBy(r => r.Name).ToList(), "Id", "Name", model.RoleID);
+                return View(model);
+            }
             var user = new ApplicationUser { UserName = model.Email, Email = model.Email, FirstName = model.FirstName, LastName = model.LastName };
             var result = await UserManager.CreateAsync(user, model.Password);
             if (result.Succeeded)
@@ -280,7 +309,7 @@ namespace Queue.Controllers
             }
 
             List<SelectListItem> RoleID = new List<SelectListItem>();
-            var RolesNames = db.Roles.OrderBy(c => c.Name).ToList();
+            var RolesNames = db.Roles.Where(c => c.Name != "SAdmin").OrderBy(c => c.Name).ToList();
             foreach (var r in RolesNames)
             {
                 RoleID.Add(new SelectListItem() { Text = r.Name, Value = r.Id });
@@ -560,15 +589,18 @@ namespace Queue.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> LogOff()
         {
+            Log.InfoFormat("Logout: inicio requestId={0}", HttpContext.Items["RequestLogId"]);
             var userid = User.Identity.GetUserId();
             var oUser = await db.Users.Where(u => u.Id == userid).SingleOrDefaultAsync();
             oUser.IsLoged = false;
             db.Entry(oUser).State = EntityState.Modified;
             await db.SaveChangesAsync();
 
+            Log.InfoFormat("Logout: estado guardado; limpiando sesión requestId={0}", HttpContext.Items["RequestLogId"]);
             Session.RemoveAll();
 
             AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
+            Log.InfoFormat("Logout: sesión cerrada requestId={0}", HttpContext.Items["RequestLogId"]);
             return RedirectToAction("Login", "Account");
         }
 

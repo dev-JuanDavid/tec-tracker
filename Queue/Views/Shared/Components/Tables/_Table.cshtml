@@ -1,0 +1,63 @@
+﻿@model Queue.Models.Components.TableComponent
+@using Queue.Models.Components
+<section data-component-table data-page-size="@Model.PageSize" data-paginate="@Model.EnablePagination.ToString().ToLowerInvariant()" class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+    <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-6">
+        <div>
+            <h1 class="text-xl font-semibold tracking-tight text-slate-800">@Model.Title <span class="ml-2 rounded-full bg-[#6d5fb9]/10 px-2.5 py-1 text-xs font-medium text-[#6d5fb9]">@Model.Rows.Count</span></h1>
+            <p class="mt-2 text-sm text-slate-500">@Model.Description</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+        @if (Model.EnableExport)
+        {
+            <button type="button" data-export="excel" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">Exportar Excel</button>
+            <button type="button" data-export="pdf" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">Exportar PDF</button>
+        }
+        @foreach (var action in Model.Actions)
+        {
+            <a href="@action.Url" class="rounded-xl border border-[#6d5fb9]/20 px-4 py-2.5 text-sm font-semibold text-[#6d5fb9] hover:bg-[#6d5fb9]/10 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">@action.Value</a>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.CreateUrl))
+        {
+            <a href="@Model.CreateUrl" class="inline-flex items-center gap-2 rounded-xl bg-[#6d5fb9] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#594b9c] focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20"><i class="mdi mdi-plus" aria-hidden="true"></i>@Model.CreateLabel</a>
+        }
+        </div>
+    </header>
+    @if (Model.EnableExport) { <p data-export-status role="status" class="px-6 text-sm text-slate-500"></p> }
+    @if (Model.EnableSearch)
+    {
+        <div class="max-w-sm px-6 py-4">
+            @Html.Partial("~/Views/Shared/Components/Inputs/_Field.cshtml", new TextInput { Name = Model.Id + "_search", Label = "Buscar registros", Placeholder = "Escribe para buscar…", Autocomplete = "off" })
+        </div>
+    }
+    <div class="overflow-x-auto">
+        <table id="@Model.Id" class="w-full text-left text-sm">
+            <caption class="sr-only">@Model.Title</caption>
+            <thead class="border-b border-slate-100 bg-slate-50/80 text-xs text-slate-500">
+                <tr>@foreach (var header in Model.Headers) { <th scope="col" class="whitespace-nowrap px-6 py-4 font-semibold">@header</th> }</tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @foreach (var row in Model.Rows)
+                {
+                    <tr data-table-row class="transition hover:bg-[#6d5fb9]/5">
+                        @foreach (var cell in row)
+                        {
+                            <td data-searchable="@(cell.Kind != CellKind.Link ? "true" : "false")" class="px-6 py-4 text-slate-700">
+                                @if (cell.Kind == CellKind.Badge)
+                                {
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium @(cell.Positive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")"><span class="h-1.5 w-1.5 rounded-full @(cell.Positive ? "bg-emerald-500" : "bg-slate-400")" aria-hidden="true"></span>@cell.Value</span>
+                                }
+                                else if (cell.Kind == CellKind.Link)
+                                {
+                                    <a href="@cell.Url" class="inline-flex items-center rounded-lg border border-[#6d5fb9]/20 px-3 py-1.5 text-xs font-semibold text-[#6d5fb9] hover:bg-[#6d5fb9]/10 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">@cell.Value</a>
+                                }
+                                else { @cell.Value }
+                            </td>
+                        }
+                    </tr>
+                }
+                <tr data-table-empty hidden="@(Model.Rows.Count > 0 ? "hidden" : null)"><td colspan="@Model.Headers.Count" class="px-6 py-16 text-center text-slate-500"><span data-empty-message data-default-message="@Model.EmptyMessage">@Model.EmptyMessage</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+    @Html.Partial("~/Views/Shared/Components/Tables/_Pagination.cshtml", Model)
+</section>

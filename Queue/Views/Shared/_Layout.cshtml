@@ -2,6 +2,9 @@
     Layout = null;
     var username = (Session["Name"] != null && !string.IsNullOrEmpty(Session["Name"].ToString())) ? Session["Name"].ToString() : "Usuario";
     var useremail = (Session["Email"] != null) ? Session["Email"].ToString() : "";
+    var pageTitle = Convert.ToString(ViewBag.NavTitle);
+    if (string.IsNullOrWhiteSpace(pageTitle)) { pageTitle = Convert.ToString(ViewBag.Title); }
+    if (string.IsNullOrWhiteSpace(pageTitle)) { pageTitle = Convert.ToString(ViewContext.RouteData.Values["controller"]); }
 }
 
 <!DOCTYPE html>
@@ -17,24 +20,122 @@
     <!-- Icons: FontAwesome + MDI (mantengo MDI por tu sidebar; puedes quitar uno luego) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/mdi/css/materialdesignicons.min.css" rel="stylesheet" />
+    <script>
+        try {
+            if (localStorage.getItem('tec.sidebar.compact') === 'true') document.documentElement.classList.add('sidebar-compact');
+        } catch (e) { }
+    </script>
+    <style>
+        :root { --sidebar-brand: #6d5fb9; }
+        #sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-brand); color: #fff; box-shadow: 8px 0 32px rgba(42, 31, 82, .1); transition: width .22s ease, transform .22s ease; z-index: 45; }
+        #sidebar .sidebar-brand { height: 104px; padding: 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,.15); }
+        #sidebar .brand-mark { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25); border-radius: 13px; font-size: 23px; }
+        #sidebar .brand-title { font-size: 17px; font-weight: 700; letter-spacing: -.4px; }
+        #sidebar .brand-caption { font-size: 11px; color: #eeebff; margin-top: 3px; }
+        #sidebar .sidebar-section { padding: 24px 24px 10px; color: #eeebff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.6px; }
+        #sidebar nav > ul { padding: 0 12px; }
+        #sidebar nav a, #sidebar nav button { color: #fff; min-height: 46px; border-radius: 12px; font-size: 13px; font-weight: 500; transition: background .15s ease, color .15s ease; }
+        #sidebar nav > ul > li > a, #sidebar nav > ul > li > button { padding: 11px 13px; }
+        #sidebar nav a:hover, #sidebar nav button:hover { background: rgba(255,255,255,.12); }
+        #sidebar nav a[aria-current='page'] { background: #fff; color: #51428f; box-shadow: 0 5px 16px rgba(34, 23, 67, .12); font-weight: 700; }
+        #sidebar nav button[aria-expanded='true'] { background: rgba(35, 23, 70, .17); }
+        #sidebar nav button > span { display: flex; align-items: center; }
+        #sidebar nav i { width: 22px; text-align: center; flex-shrink: 0; }
+        #sidebar nav ul ul { margin: 8px 0 12px 23px; padding: 0 0 0 15px; border-left: 1px solid rgba(255,255,255,.25); }
+        #sidebar nav ul ul a { min-height: 36px; padding: 8px 12px; font-size: 12px; }
+        #sidebar a:focus-visible, #sidebar button:focus-visible { outline: 2px solid #f6d98b; outline-offset: 3px; }
+        #sidebar .sidebar-profile { margin: 16px 12px; padding: 13px; border: 1px solid rgba(255,255,255,.2); background: rgba(32,22,61,.14); border-radius: 16px; display: flex; gap: 10px; align-items: center; }
+        #sidebar .profile-avatar { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 11px; background: #f4efdf; color: #51428f; font-weight: 700; }
+        #sidebar .profile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 600; }
+        #sidebar .profile-caption { color: #eeebff; font-size: 10px; margin-top: 3px; }
+        #sidebar-toggle { color: #6d5fb9; }
+        #sidebar-toggle:focus-visible { outline: 2px solid #6d5fb9; }
+        #sidebar .sidebar-logout { margin: 0 12px 18px; }
+        #sidebar .sidebar-logout button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px; color: #fff; border-radius: 10px; font-size: 12px; transition: background .15s ease; }
+        #sidebar .sidebar-logout button:hover { background: rgba(255,255,255,.12); }
+        #sidebar .sidebar-logout i { font-size: 19px; }
+        .app-header { height: 76px; flex-shrink: 0; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #fff; border-bottom: 1px solid #eceaf3; }
+        .header-location { display: flex; align-items: center; gap: 16px; min-width: 0; }
+        .header-menu-button { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid #e9e6f2; border-radius: 11px; font-size: 15px; background: #faf9fd; }
+        .header-menu-button:hover { background: #eeebf9; }
+        .header-breadcrumb { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13px; }
+        #header-section { color: #7b768c; white-space: nowrap; }
+        .header-breadcrumb i { color: #b4adc8; font-size: 18px; }
+        #header-page { color: #312a48; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-search-button { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e9e6f2; border-radius: 12px; background: #faf9fd; color: #857e96; font-size: 12px; flex-shrink: 0; }
+        .header-search-button:hover { color: #51428f; background: #f1eef9; border-color: #c9c0e6; }
+        .header-search-button > i { color: #6d5fb9; }
+        .header-search-shortcut { margin-left: 24px; background: #fff; border: 1px solid #e5e0ef; border-radius: 5px; padding: 2px 5px; color: #8c839d; font-size: 10px; }
+        .header-menu-button:focus-visible, .header-search-button:focus-visible, .search-close:focus-visible { outline: 2px solid #6d5fb9; outline-offset: 3px; }
+        .navigation-search { width: min(620px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; border: 1px solid #e8e2f2; border-radius: 22px; box-shadow: 0 30px 100px rgba(32,22,61,.25); color: #312a48; background: #fff; }
+        .navigation-search::backdrop { background: rgba(25,18,45,.4); backdrop-filter: blur(4px); }
+        .search-dialog-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 24px 24px 18px; }
+        .search-dialog-heading h2 { font-size: 18px; font-weight: 700; }
+        .search-dialog-heading p { margin-top: 5px; font-size: 12px; color: #847c95; }
+        .search-close { padding: 3px 7px; border-radius: 8px; color: #847c95; font-size: 21px; }
+        .search-input-wrap { display: flex; align-items: center; gap: 12px; margin: 0 24px; border: 1px solid #d9d1e9; border-radius: 12px; padding: 12px 14px; color: #6d5fb9; }
+        .search-input-wrap:focus-within { border-color: #6d5fb9; box-shadow: 0 0 0 3px #f1eef9; }
+        #search-input { width: 100%; outline: none; border: 0; background: transparent; color: #312a48; font-size: 14px; }
+        .search-count { margin: 16px 24px 6px; color: #8c839d; font-size: 11px; }
+        .search-results { max-height: min(360px, 44dvh); overflow-y: auto; padding: 0 12px 12px; }
+        .search-result { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px; margin: 3px 0; border-radius: 10px; color: #403650; font-size: 13px; }
+        .search-result:hover, .search-result:focus-visible { background: #f1eef9; color: #51428f; outline: 2px solid #d5cbed; outline-offset: -2px; }
+        .search-result small { color: #8c839d; font-size: 11px; }
+        .search-empty { padding: 30px 12px; color: #847c95; text-align: center; font-size: 13px; }
+        .search-dialog-footer { display: flex; justify-content: space-between; padding: 12px 24px; border-top: 1px solid #f0ecf6; color: #8c839d; background: #faf9fd; font-size: 10px; }
+        @@media (max-width: 640px) {
+            .app-header { height: 64px; padding: 0 16px; gap: 12px; }
+            .header-location { gap: 12px; }
+            .header-search-label, .header-search-shortcut, #header-section, .header-breadcrumb > i { display: none; }
+            .header-search-button { padding: 10px 12px; }
+        }
+        .sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(20,16,38,.5); backdrop-filter: blur(3px); }
+        .sidebar-close { display: none; }
+        @@media (min-width: 1024px) {
+            .sidebar-compact #sidebar { width: 80px; }
+            .sidebar-compact #sidebar .sidebar-label, .sidebar-compact #sidebar .sidebar-section, .sidebar-compact #sidebar .menu-chevron { display: none; }
+            .sidebar-compact #sidebar .sidebar-brand { padding: 20px; }
+            .sidebar-compact #sidebar nav { padding-top: 22px; }
+            .sidebar-compact #sidebar nav > ul { padding: 0 10px; }
+            .sidebar-compact #sidebar nav > ul > li > a, .sidebar-compact #sidebar nav > ul > li > button { justify-content: center; padding: 12px; }
+            .sidebar-compact #sidebar nav i { margin-right: 0; }
+            .sidebar-compact #sidebar nav ul ul { display: none; }
+            .sidebar-compact #sidebar .sidebar-profile { margin: 12px 10px; padding: 10px; border: 0; background: transparent; }
+        }
+        @@media (max-width: 1023px) {
+            #sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); width: 280px; max-width: calc(100vw - 48px); }
+            .sidebar-mobile-open #sidebar { transform: translateX(0); }
+            .sidebar-mobile-open .sidebar-backdrop { display: block; }
+            .sidebar-close { display: block; margin-left: auto; padding: 6px; border-radius: 8px; }
+        }
+        @@media (prefers-reduced-motion: reduce) { #sidebar, #sidebar nav a, #sidebar nav button { transition: none; } }
+    </style>
 </head>
-<body class="flex h-screen bg-gray-100">
+<body class="flex h-screen overflow-hidden bg-gray-100">
+
+    <button type="button" id="sidebar-backdrop" class="sidebar-backdrop" tabindex="-1" aria-label="Cerrar navegación" onclick="closeMobileSidebar()"></button>
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 bg-gradient-to-b from-indigo-500 to-indigo-500 text-white flex flex-col">
+    <aside id="sidebar" class="text-white flex flex-col" aria-label="Navegación principal">
         <!-- Logo -->
-        <div class="h-40 flex items-center justify-center border-b border-white/30">
-            <img src="~/TemplateAssets/assets/images/Logo blanco.png" alt="Logo" class="h-20 " />
+        <div class="sidebar-brand">
+            <div class="brand-mark" aria-hidden="true"><i class="mdi mdi-chart-line"></i></div>
+            <div class="sidebar-label">
+                <div class="brand-title">TEC Tracker</div>
+                <div class="brand-caption">Tu equipo, conectado.</div>
+            </div>
+            <button type="button" class="sidebar-close" onclick="closeMobileSidebar()" aria-label="Cerrar menú"><i class="mdi mdi-close text-xl"></i></button>
         </div>
 
         <!-- Menu -->
         <nav class="flex-1 overflow-y-auto">
+            <div class="sidebar-section">Espacio de trabajo</div>
             <ul class="space-y-1 p-2">
                 <li>
                     <a href="@Url.Action("Index", "Home")"
                        class="flex items-center p-2 rounded-md hover:bg-gray-700">
                         <i class="mdi mdi-home text-xl mr-3"></i>
-                        <span>Dashboard</span>
+                        <span class="sidebar-label">Panel de actividad</span>
                     </a>
                 </li>
 
@@ -45,9 +146,9 @@
                                 onclick="toggleMenu('adminMenu')" aria-expanded="false">
                             <span class="flex items-center">
                                 <i class="mdi mdi-apps text-xl mr-3"></i>
-                                Administración
+                                <span class="sidebar-label">Administración</span>
                             </span>
-                            <i class="mdi mdi-chevron-down transition-transform" id="adminMenuIcon"></i>
+                            <i class="mdi mdi-chevron-down transition-transform menu-chevron" id="adminMenuIcon"></i>
                         </button>
                         <ul id="adminMenu" class="hidden pl-6 space-y-1" role="menu">
                             <li><a href="@Url.Action("UserList", "Manage")" class="block p-2 hover:bg-gray-700 rounded">Usuarios</a></li>
@@ -66,9 +167,9 @@
                             onclick="toggleMenu('reportMenu')" aria-expanded="false">
                         <span class="flex items-center">
                             <i class="mdi mdi-chart-bar text-xl mr-3"></i>
-                            Informes
+                            <span class="sidebar-label">Informes</span>
                         </span>
-                        <i class="mdi mdi-chevron-down transition-transform" id="reportMenuIcon"></i>
+                        <i class="mdi mdi-chevron-down transition-transform menu-chevron" id="reportMenuIcon"></i>
                     </button>
                     <ul id="reportMenu" class="hidden pl-6 space-y-1" role="menu">
                         <li><a href="@Url.Action("Index", "ReportGantt")" class="block p-2 hover:bg-gray-700 rounded">Reporte Actividades</a></li>
@@ -81,74 +182,47 @@
         </nav>
 
         <!-- Extra links -->
-        <div class="border-t border-white/20 mt-4 p-4 space-y-2">
-            <a href="#" class="flex items-center p-2 rounded-md hover:bg-white/10 transition">
-                <i class="mdi mdi-help-circle-outline text-lg mr-3"></i> Ayuda
-            </a>
-            <a href="#" class="flex items-center p-2 rounded-md hover:bg-white/10 transition">
-                <i class="mdi mdi-book-open-outline text-lg mr-3"></i> Manual
-            </a>
+        <div class="sidebar-profile">
+            <div class="profile-avatar" aria-hidden="true">@username.Substring(0, 1).ToUpperInvariant()</div>
+            <div class="sidebar-label min-w-0">
+                <div class="profile-name">@username</div>
+                <div class="profile-caption">@(User.IsInRole("SAdmin") ? "Super administrador" : User.IsInRole("Admin") ? "Administrador" : "Mi espacio de trabajo")</div>
+            </div>
         </div>
+        @if (Request.IsAuthenticated)
+        {
+            using (Html.BeginForm("LogOff", "Account", FormMethod.Post, new { id = "logoutForm", @class = "sidebar-logout" }))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" aria-label="Cerrar sesión" title="Cerrar sesión">
+                    <i class="mdi mdi-logout" aria-hidden="true"></i>
+                    <span class="sidebar-label">Cerrar sesión</span>
+                </button>
+            }
+        }
     </aside>
 
     <!-- Main -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col min-w-0">
         <!-- Header -->
-        <header id="headder" class="bg-white text-gray-800 h-16 px-4 flex items-center justify-between shadow-md z-30 border-b border-gray-200">
-            <!-- Sección izquierda: menú + título -->
-            <div class="flex items-center space-x-4">
-                <!-- Toggle sidebar (visible en todas las resoluciones ahora) -->
+        <header id="headder" class="app-header">
+            <div class="header-location">
                 <button type="button" id="sidebar-toggle" onclick="toggleSidebar(this)" aria-expanded="true"
-                        class="text-gray-600 text-2xl p-2 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <i class="fa fa-bars"></i>
+                        aria-controls="sidebar" aria-label="Alternar navegación" class="header-menu-button">
+                    <i class="fa fa-bars" aria-hidden="true"></i>
                 </button>
-
-                <!-- Nombre de la página -->
-                <div class="text-lg font-semibold text-gray-800">
-                    @ViewBag.NavTitle
-                </div>
+                <nav aria-label="Ubicación actual" class="header-breadcrumb">
+                    <span id="header-section">Espacio de trabajo</span>
+                    <i class="mdi mdi-chevron-right" aria-hidden="true"></i>
+                    <span id="header-page" aria-current="page">@pageTitle</span>
+                </nav>
             </div>
-
-            <!-- Sección derecha: búsqueda + usuario -->
-            <div class="flex items-center space-x-6">
-                <!-- Botón búsqueda -->
-                <div class="relative">
-                    <button type="button" id="toggle-search"
-                            class="text-gray-600 text-lg hover:text-gray-800 p-2 rounded-md hover:bg-gray-100" aria-expanded="false">
-                        <i class="fa fa-search"></i>
-                    </button>
-
-                    <!-- Form búsqueda -->
-                    <form id="search-form"
-                          class="hidden absolute right-0 top-full mt-2 bg-white p-2 rounded-lg shadow-lg border border-gray-200 z-50" role="search">
-                        <input id="search-input" type="text" placeholder="Buscar..."
-                               class="px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <button type="button" id="close-search" class="ml-2 text-gray-500 hover:text-gray-700">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Usuario + botón salir -->
-                <div class="flex items-center space-x-3">
-                    <i class="fa fa-user text-gray-600 text-lg"></i>
-                    <span class="text-gray-800 text-sm font-medium">
-                        @Html.Raw(username)
-                    </span>
-
-                    @if (Request.IsAuthenticated)
-                    {
-                        using (Html.BeginForm("LogOff", "Account", FormMethod.Post, new { id = "logoutForm", @class = "inline-flex" }))
-                        {
-                            @Html.AntiForgeryToken()
-                            <button type="submit"
-                                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-sm flex items-center transition duration-150 ease-in-out">
-                                <i class="fa fa-sign-out-alt mr-1"></i> Salir
-                            </button>
-                        }
-                    }
-                </div>
-            </div>
+            <button type="button" id="toggle-search" class="header-search-button" aria-haspopup="dialog"
+                    aria-controls="navigation-search" aria-expanded="false" aria-label="Buscar páginas del menú">
+                <i class="fa fa-search" aria-hidden="true"></i>
+                <span class="header-search-label">Ir a una página...</span>
+                <kbd class="header-search-shortcut">Ctrl K</kbd>
+            </button>
         </header>
 
         <!-- Content -->
@@ -161,6 +235,23 @@
             © @DateTime.Now.Year - TEC Tracker
         </footer>
     </div>
+
+    <dialog id="navigation-search" class="navigation-search" aria-labelledby="navigation-search-title">
+        <div class="search-dialog-heading">
+            <div>
+                <h2 id="navigation-search-title">¿A dónde quieres ir?</h2>
+                <p>Encuentra una página de tu espacio de trabajo.</p>
+            </div>
+            <button type="button" id="close-search" aria-label="Cerrar búsqueda" class="search-close"><i class="mdi mdi-close" aria-hidden="true"></i></button>
+        </div>
+        <label for="search-input" class="sr-only">Buscar páginas del menú</label>
+        <div class="search-input-wrap"><i class="fa fa-search" aria-hidden="true"></i>
+            <input id="search-input" type="search" placeholder="Buscar una página..." autocomplete="off" />
+        </div>
+        <p id="search-count" role="status" aria-live="polite" class="search-count"></p>
+        <div id="search-results" class="search-results"></div>
+        <div class="search-dialog-footer"><span>↑ ↓ Navegar · Enter Abrir</span><span>Esc Cerrar</span></div>
+    </dialog>
 
     <!-- Modal Global -->
     <div id="globalModal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
@@ -175,42 +266,68 @@
     </div>
 
     <script>
-        // Toggle sidebar: oculta/muestra el aside
-        function toggleSidebar(btn) {
-            const sidebar = document.getElementById('sidebar');
-            if (!sidebar) return;
-            sidebar.classList.toggle('hidden');
+        function sidebarPreference(key, value) {
+            try {
+                if (value !== undefined) localStorage.setItem('tec.sidebar.' + key, String(value));
+                return localStorage.getItem('tec.sidebar.' + key);
+            } catch (e) { return null; }
+        }
 
-            // accesibilidad
-            if (btn) {
-                const expanded = btn.getAttribute('aria-expanded') === 'true';
-                btn.setAttribute('aria-expanded', (!expanded).toString());
+        function syncSidebar() {
+            const mobile = window.matchMedia('(max-width: 1023px)').matches;
+            const open = document.documentElement.classList.contains('sidebar-mobile-open');
+            const compact = document.documentElement.classList.contains('sidebar-compact');
+            const sidebar = document.getElementById('sidebar');
+            sidebar.inert = mobile && !open;
+            const button = document.getElementById('sidebar-toggle');
+            button.setAttribute('aria-expanded', String(mobile ? open : !compact));
+            button.setAttribute('aria-label', mobile ? (open ? 'Cerrar navegación' : 'Abrir navegación') : (compact ? 'Expandir navegación' : 'Contraer navegación'));
+            ['adminMenu', 'reportMenu'].forEach(id => {
+                const menu = document.getElementById(id);
+                const trigger = document.querySelector(`button[aria-controls="${id}"]`);
+                if (menu && trigger) trigger.setAttribute('aria-expanded', String(!menu.classList.contains('hidden') && (mobile || !compact)));
+            });
+        }
+
+        function closeMobileSidebar() {
+            document.documentElement.classList.remove('sidebar-mobile-open');
+            syncSidebar();
+            document.getElementById('sidebar-toggle').focus();
+        }
+
+        function toggleSidebar(btn) {
+            if (window.matchMedia('(max-width: 1023px)').matches) {
+                const open = document.documentElement.classList.toggle('sidebar-mobile-open');
+                syncSidebar();
+                if (open) document.querySelector('#sidebar .sidebar-close').focus();
+            } else {
+                const compact = document.documentElement.classList.toggle('sidebar-compact');
+                sidebarPreference('compact', compact);
+                syncSidebar();
             }
         }
 
-        // Toggle menús (adminMenu, reportMenu, etc.)
-        function toggleMenu(id) {
+        function setSidebarMenu(id, expanded, persist) {
             const menu = document.getElementById(id);
             const icon = document.getElementById(id + "Icon");
             const button = document.querySelector(`button[onclick*="${id}"]`);
-
             if (!menu) return;
+            menu.classList.toggle('hidden', !expanded);
+            if (icon) icon.classList.toggle('rotate-180', expanded);
+            if (button) button.setAttribute('aria-expanded', String(expanded));
+            if (persist) sidebarPreference(id, expanded);
+        }
 
-            const isHidden = menu.classList.contains('hidden');
-            // cerrar todos los menús antes (si prefieres permitir varios abiertos, quita este bloque)
-            document.querySelectorAll("[id$='Menu']").forEach(m => {
-                if (m.id !== id) {
-                    m.classList.add('hidden');
-                    const i = document.getElementById(m.id + "Icon");
-                    if (i) i.classList.remove('rotate-180');
-                    const btnOther = document.querySelector(`button[onclick*="${m.id}"]`);
-                    if (btnOther) btnOther.setAttribute('aria-expanded', 'false');
-                }
-            });
-
-            menu.classList.toggle('hidden', !isHidden); // si estaba hidden => mostrar
-            if (icon) icon.classList.toggle('rotate-180', isHidden);
-            if (button) button.setAttribute('aria-expanded', isHidden.toString());
+        function toggleMenu(id) {
+            if (!window.matchMedia('(max-width: 1023px)').matches && document.documentElement.classList.contains('sidebar-compact')) {
+                document.documentElement.classList.remove('sidebar-compact');
+                sidebarPreference('compact', false);
+                syncSidebar();
+                setSidebarMenu(id, true, true);
+                return;
+            }
+            const menu = document.getElementById(id);
+            if (menu) setSidebarMenu(id, menu.classList.contains('hidden'), true);
         }
 
         function closeModal() {
@@ -220,66 +337,143 @@
 
         // Search toggle
         document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+            const normalizePath = path => path.replace(/\/+$/, '').toLowerCase() || '/';
+            sidebar.querySelectorAll('a[href]').forEach(link => {
+                link.setAttribute('title', link.textContent.trim());
+                link.setAttribute('aria-label', link.textContent.trim());
+                if (normalizePath(new URL(link.href, window.location.href).pathname) === normalizePath(window.location.pathname)) {
+                    link.setAttribute('aria-current', 'page');
+                }
+                link.addEventListener('click', function () {
+                    if (window.matchMedia('(max-width: 1023px)').matches) closeMobileSidebar();
+                });
+            });
+            ['adminMenu', 'reportMenu'].forEach(id => {
+                const menu = document.getElementById(id);
+                if (!menu) return;
+                const button = document.querySelector(`button[onclick*="${id}"]`);
+                button.setAttribute('type', 'button');
+                button.setAttribute('aria-controls', id);
+                button.setAttribute('title', button.textContent.trim());
+                button.setAttribute('aria-label', button.textContent.trim());
+                menu.removeAttribute('role');
+                setSidebarMenu(id, !!menu.querySelector('[aria-current="page"]') || sidebarPreference(id) === 'true', false);
+            });
+            syncSidebar();
+            window.addEventListener('resize', function () {
+                if (!window.matchMedia('(max-width: 1023px)').matches) document.documentElement.classList.remove('sidebar-mobile-open');
+                syncSidebar();
+            });
+            const navigationLinks = Array.from(sidebar.querySelectorAll('nav a[href]'));
+            const currentLink = sidebar.querySelector('[aria-current="page"]');
+            const sectionFor = link => {
+                const group = link.closest('ul[id]');
+                const trigger = group && sidebar.querySelector(`button[aria-controls="${group.id}"]`);
+                return trigger ? trigger.textContent.trim() : 'Espacio de trabajo';
+            };
+            if (currentLink) document.getElementById('header-section').textContent = sectionFor(currentLink);
+
             const toggleSearchBtn = document.getElementById('toggle-search');
-            const closeSearchBtn = document.getElementById('close-search');
-            const searchForm = document.getElementById('search-form');
+            const searchDialog = document.getElementById('navigation-search');
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            const searchCount = document.getElementById('search-count');
+            const normalizeSearch = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const pages = navigationLinks.map(link => ({
+                title: link.textContent.trim(), section: sectionFor(link), href: link.href
+            }));
 
-            if (toggleSearchBtn && searchForm) {
-                toggleSearchBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    const isHidden = searchForm.classList.contains('hidden');
-                    searchForm.classList.toggle('hidden');
-                    toggleSearchBtn.setAttribute('aria-expanded', (!isHidden).toString());
-                    if (!isHidden) {
-                        // foco en input si se abrió
-                        const input = document.getElementById('search-input');
-                        if (input) input.focus();
-                    }
+            function renderSearchResults() {
+                const query = normalizeSearch(searchInput.value.trim());
+                const matches = pages.filter(page => normalizeSearch(page.title + ' ' + page.section).includes(query));
+                searchResults.replaceChildren();
+                searchCount.textContent = matches.length + (matches.length === 1 ? ' página disponible' : ' páginas disponibles');
+                matches.forEach(page => {
+                    const link = document.createElement('a');
+                    link.className = 'search-result';
+                    link.href = page.href;
+                    const title = document.createElement('span');
+                    title.textContent = page.title;
+                    const section = document.createElement('small');
+                    section.textContent = page.section;
+                    link.append(title, section);
+                    searchResults.appendChild(link);
                 });
+                if (!matches.length) {
+                    const empty = document.createElement('p');
+                    empty.className = 'search-empty';
+                    empty.textContent = 'No encontramos esa página. Prueba con otro nombre.';
+                    searchResults.appendChild(empty);
+                }
             }
 
-            if (closeSearchBtn && searchForm) {
-                closeSearchBtn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    searchForm.classList.add('hidden');
-                    toggleSearchBtn?.setAttribute('aria-expanded', 'false');
-                });
+            function openNavigationSearch() {
+                if (document.documentElement.classList.contains('sidebar-mobile-open')) closeMobileSidebar();
+                if (searchDialog.open) return;
+                searchInput.value = '';
+                renderSearchResults();
+                searchDialog.showModal();
+                toggleSearchBtn.setAttribute('aria-expanded', 'true');
+                searchInput.focus();
             }
+            toggleSearchBtn.addEventListener('click', openNavigationSearch);
+            document.getElementById('close-search').addEventListener('click', () => searchDialog.close());
+            searchDialog.addEventListener('close', () => {
+                toggleSearchBtn.setAttribute('aria-expanded', 'false');
+                toggleSearchBtn.focus();
+            });
+            searchDialog.addEventListener('click', event => {
+                const box = searchDialog.getBoundingClientRect();
+                if (event.target === searchDialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) searchDialog.close();
+            });
+            searchInput.addEventListener('input', renderSearchResults);
+            searchDialog.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    searchDialog.close();
+                    return;
+                }
+                const results = Array.from(searchResults.querySelectorAll('a'));
+                if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && results.length) {
+                    event.preventDefault();
+                    const index = results.indexOf(document.activeElement);
+                    const next = index < 0 ? (event.key === 'ArrowDown' ? 0 : results.length - 1) :
+                        (index + (event.key === 'ArrowDown' ? 1 : -1) + results.length) % results.length;
+                    results[next].focus();
+                } else if (event.key === 'Enter' && document.activeElement === searchInput && results.length) {
+                    event.preventDefault();
+                    results[0].click();
+                }
+            });
+            document.addEventListener('keydown', event => {
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                    event.preventDefault();
+                    if (searchDialog.open) searchDialog.close(); else openNavigationSearch();
+                }
+            });
 
             // Cerrar menús/modal/search con ESC
             document.addEventListener('keydown', function (e) {
+                if (searchDialog.open) return;
                 if (e.key === 'Escape') {
-                    // cerrar menus
-                    document.querySelectorAll("[id$='Menu']").forEach(m => m.classList.add('hidden'));
+                    if (document.documentElement.classList.contains('sidebar-mobile-open')) closeMobileSidebar();
                     document.getElementById('globalModal')?.classList.add('hidden');
-                    document.getElementById('search-form')?.classList.add('hidden');
+                }
+                if (e.key === 'Tab' && document.documentElement.classList.contains('sidebar-mobile-open')) {
+                    const focusable = Array.from(sidebar.querySelectorAll('a[href], button')).filter(el => el.getClientRects().length);
+                    const first = focusable[0], last = focusable[focusable.length - 1];
+                    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
                 }
             });
 
-            // click fuera: cierra menús y search
-            document.addEventListener('click', function (e) {
-                // cerrar menús que terminen en Menu
-                document.querySelectorAll("[id$='Menu']").forEach(menu => {
-                    if (!e.target.closest(`#${menu.id}`) && !e.target.closest(`button[onclick*="${menu.id}"]`)) {
-                        menu.classList.add('hidden');
-                        const icon = document.getElementById(menu.id + "Icon");
-                        if (icon) icon.classList.remove('rotate-180');
-                        const btn = document.querySelector(`button[onclick*="${menu.id}"]`);
-                        if (btn) btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-
-                // cerrar search si clic fuera del formulario y no es el boton toggle
-                const searchFormEl = document.getElementById('search-form');
-                const toggleSearchBtnEl = document.getElementById('toggle-search');
-                if (searchFormEl && !e.target.closest('#search-form') && !e.target.closest('#toggle-search')) {
-                    searchFormEl.classList.add('hidden');
-                    if (toggleSearchBtnEl) toggleSearchBtnEl.setAttribute('aria-expanded', 'false');
-                }
-            });
         });
     </script>
 
+    <script src="@Url.Content("~/Scripts/components/table.js")" defer></script>
+    <script src="@Url.Content("~/Scripts/components/dependent-select.js")" defer></script>
     @RenderSection("Scripts", required: false)
 </body>
 </html>

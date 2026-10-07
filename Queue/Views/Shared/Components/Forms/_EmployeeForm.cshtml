@@ -1,0 +1,37 @@
+﻿@model Queue.Models.Agent_Employee
+@using Queue.Models.Components
+@using System.Linq
+@{
+    var editing = Model != null && Model.idEmployee != Guid.Empty;
+    var jobs = new SelectList(ViewBag.Jobs, "idJob", "Cargo");
+    var schedules = new SelectList(ViewBag.Horarys, "Id_GroupHorary", "NameGroup");
+    var groups = (ViewData["GroupList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).ToList();
+    groups.Insert(0, new SelectListItem { Value = Guid.Empty.ToString(), Text = "Sin grupo" });
+    var inputs = new System.Collections.Generic.List<IFormInput> {
+        new TextInput { Name = "Nombre", Label = "Nombre completo", Value = Model == null ? null : Model.Nombre, Required = true, Autocomplete = "name" },
+        new TextInput { Name = "Identificacion", Label = "Identificación", Value = Model == null ? null : Model.Identificacion, Required = true },
+        new TextInput { Name = "Direccion", Label = "Dirección", Value = Model == null ? null : Model.Direccion, Required = true, Autocomplete = "street-address" },
+        new TextInput { Name = "Telefono", Label = "Teléfono", Value = Model == null ? null : Model.Telefono, Required = true, Autocomplete = "tel" },
+        new EmailInput { Name = "Email", Label = "Correo electrónico", Value = Model == null ? null : Model.Email, Required = true, Autocomplete = "email" },
+        new TextInput { Name = "Usuario", Label = "Usuario", Value = Model == null ? null : Model.Usuario, Required = true, Autocomplete = "off" },
+        new SelectInput { Name = "Cargo", Label = "Cargo", Value = Model == null ? null : (object)Model.Cargo, Options = jobs, EmptyLabel = "Selecciona un cargo", Required = true },
+        new SelectInput { Name = "IdEmployeesGroup", Label = "Grupo de empleados", Value = Model == null ? Guid.Empty : Model.IdEmployeesGroup, Options = groups, EmptyLabel = null },
+        new SelectInput { Name = "Id_GroupHorary", Label = "Horario", Value = Model == null ? null : (object)Model.Id_GroupHorary, Options = schedules, EmptyLabel = "Sin horario" }
+    };
+    if (editing) {
+        inputs.Add(new HiddenInput { Name = "idEmployee", Value = Model.idEmployee });
+        inputs.Add(new SelectInput {
+            Name = "string_status", Label = "Estado", Value = Model.status ? "Active" : "Inactive", EmptyLabel = null,
+            Options = new[] { new SelectListItem { Value = "Active", Text = "Activo" }, new SelectListItem { Value = "Inactive", Text = "Inactivo" } }
+        });
+    }
+    var form = new FormComponent {
+        Id = "employee-form", Title = editing ? "Editar empleado" : "Nuevo empleado",
+        Description = "Administra los datos del empleado, su cargo y horario.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Agent_Employee"),
+        CancelUrl = Url.Action("Index", "Agent_Employee"),
+        SubmitLabel = editing ? "Guardar cambios" : "Crear empleado", Inputs = inputs
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+

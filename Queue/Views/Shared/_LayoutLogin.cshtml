@@ -1,57 +1,35 @@
-﻿
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="../../images/favicon.ico">
-
-    <title>@ViewBag.Title - Teck Tracker</title>
-    @*<link href="~/assets/vendor_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
-        <link href="~/Content/css/bootstrap-extend.css" rel="stylesheet" />
-        <link href="~/Content/css/master_style.css" rel="stylesheet" />
-        <link href="~/Content/css/skins/_all-skins.css" rel="stylesheet" />*@
+    <title>@ViewBag.Title</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-
-<body class="hold-transition bg-img"
-      style="background-image: url('@Url.Content("~/TemplateAssets/assets/images/Fondo-ondas.png")');
-             background-size: 100% 100%;
-             background-repeat: no-repeat;
-             background-attachment: fixed;">
-    >
-
-    <div class="container mx-auto min-h-screen flex items-center justify-center">
-        <div class="flex flex-wrap justify-center w-full">
-            <!-- Columna Logo -->
-            <div class="w-full md:w-5/12 lg:w-4/12">
-                <div class="flex flex-col justify-center items-center h-full  rounded-xl p-6">
-                    <div class="w-full">
-                        <div class="logo-mini">
-                            <span class="light-logo"><img style="width:100%" src="~/TemplateAssets/assets/images/Teck logo.png" alt="logo"></span>
-                        </div>
-
-                    </div>
+<body class="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
+    <main class="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-8 sm:px-8">
+        <div class="grid w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-xl shadow-slate-200/50 lg:min-h-[680px] lg:grid-cols-2">
+            <aside class="relative hidden overflow-hidden bg-[#6d5fb9] p-12 text-white lg:flex lg:flex-col lg:justify-between">
+                <div class="relative z-10 h-20" aria-hidden="true"></div>
+                <div class="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full border border-white/15" aria-hidden="true"></div>
+                <div class="pointer-events-none absolute -bottom-40 -left-32 h-[480px] w-[480px] rounded-full bg-white/5" aria-hidden="true"></div>
+                <div class="relative z-10">
+                    <p class="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Tu equipo, conectado</p>
+                    <h2 class="mt-5 max-w-sm text-4xl font-semibold leading-tight tracking-tight">Una visión clara de cada jornada.</h2>
+                    <p class="mt-5 max-w-sm text-sm leading-7 text-white/75">Consulta la actividad de tu equipo y administra tu empresa desde un solo lugar.</p>
+                    <div class="mt-8 h-1 w-12 rounded-full bg-white/50" aria-hidden="true"></div>
                 </div>
-            </div>
-
-            <!-- Columna Login -->
-            <div class="w-full md:w-5/12 lg:w-5/12">
-                <div class=" rounded-xl  p-10 h-full">
-                    @RenderBody()
-                </div>
-            </div>
+                <p class="relative z-10 mt-16 text-xs text-white/60">Gestión de equipos y actividad</p>
+            </aside>
+            <section class="flex min-w-0 items-center justify-center px-6 py-10 sm:px-12 lg:py-16">
+                <div class="w-full max-w-md">@RenderBody()</div>
+            </section>
         </div>
-    </div>
-
-
-    <script src="~/assets/vendor_components/jquery-3.3.1/jquery-3.3.1.min.js"></script>
-    <script src="~/assets/vendor_components/popper/dist/popper.min.js"></script>
-    <script src="~/assets/vendor_components/bootstrap/dist/js/bootstrap.min.js"></script>
-    @*@Scripts.Render("~/assets/loginscripts")*@
+    </main>
+    <script src="@Url.Content("~/assets/vendor_components/jquery-3.3.1/jquery-3.3.1.min.js")"></script>
+    <script src="@Url.Content("~/assets/vendor_components/popper/dist/popper.min.js")"></script>
+    <script src="@Url.Content("~/assets/vendor_components/bootstrap/dist/js/bootstrap.min.js")"></script>
     @RenderSection("scripts", required: false)
 </body>
 </html>
+

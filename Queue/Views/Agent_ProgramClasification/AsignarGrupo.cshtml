@@ -1,136 +1,39 @@
-@model Queue.Models.Agent_ProgramClasification
-
+锘緻model Queue.Models.Agent_ProgramClasification
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
-    ViewBag.Title = "Asignar";
+    ViewBag.Title = "Grupos del programa";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var groups = (ViewBag.idemployeesGroup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).ToList();
+    var assigned = ViewBag.asigemp as IEnumerable<Agent_ClasificationGroup> ?? Model.ClasificationGroups;
+    var table = TableComponent.From(assigned,
+        new TableColumn<Agent_ClasificationGroup> { Title = "Grupo", Cell = g => TableCell.Text(g.Agent_EmployeesGroups == null ? "" : g.Agent_EmployeesGroups.Nombre) },
+        new TableColumn<Agent_ClasificationGroup> { Title = "Integrantes", Cell = g => TableCell.Link("Ver grupo", Url.Action("Edit", "Agent_EmployeesGroups", new { id = g.idemployeesGroup })) },
+        new TableColumn<Agent_ClasificationGroup> { Title = "Acciones", Cell = g => TableCell.Link("Quitar asignaci贸n", Url.Action("DeleteProgramGroup", "Agent_ProgramClasification", new { Id = g.Id, idprogramclasification = Model.idprogramclasification })) });
+    table.Title = "Grupos asignados";
+    table.Description = "Programa: " + Model.name + " 路 " + (Model.clasification == 1 ? "Productiva" : Model.clasification == 2 ? "Improductiva" : "Neutral");
+    table.EmptyMessage = "Esta clasificaci贸n todav铆a no tiene grupos asignados.";
+    var form = new FormComponent {
+        Id = "classification-group-form", Title = "Asignar grupo", Description = "Selecciona un grupo disponible para esta clasificaci贸n.",
+        ActionUrl = Url.Action("AddGrupo", "Agent_ProgramClasification"), CancelUrl = Url.Action("Index", "Agent_ProgramClasification"), SubmitLabel = "Asignar grupo",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "idprogramclasification", Value = Model.idprogramclasification },
+            new HiddenInput { Name = "clasification", Value = Model.clasification },
+            new SelectInput { Name = "idemployeesGroup", Label = "Grupo", Options = groups, Required = true, EmptyLabel = "Selecciona un grupo" }
+        }
+    };
 }
-
-<div id="divblock" class="row">
-    <div class="col-lg-12 col-12">
-        <div class="box">
-            <div class="box-header with-border">
-                <h4 class="box-title">Editar Grupo Usuario</h4>
-            </div>
-
-            <div class="box-body">
-                <div class="form-group">
-                    @* Obtener Nombre del Programa y Clasificaci髇 *@
-                    <h4 class="text-asig">@ViewBag.nombrePrograma</h4>
-                    <h2>
-                        @if (Model.clasification == 1)
-                        {
-                            <label>Productiva</label>
-                        }
-                        else if (Model.clasification == 2)
-                        {
-                            <label>Improductiva</label>
-                        }
-                        else
-                        {
-                            <label>Neutral</label>
-                        }
-                    </h2>
-                </div>
-
-                <div class="form-actions">
-                    <a href="@Url.Action("Index", "Agent_ProgramClasification")" class="btn btn-info float-right">
-                        <i class="glyphicon glyphicon-chevron-left"></i> Volver
-                    </a>
-                </div>
-            </div>
-
-            @using (Html.BeginForm("AddGrupo", "Agent_ProgramClasification"))
-            {
-                @Html.AntiForgeryToken()
-                @Html.HiddenFor(m => m.idprogramclasification)
-                @Html.HiddenFor(m => m.clasification)
-
-                <div class="box">
-                    <div class="box-header with-border">
-                        <h4 class="box-title">Agregar Grupo</h4>
-                    </div>
-                    <div class="box-body">
-                        <div class="form-group">
-                            <label for="idemployeesGroup">Grupo</label>
-                            <span asp-validation-for="idemployeesGroup" class="text-danger"></span>
-                            @Html.DropDownList("idemployeesGroup", ViewBag.idemployee as SelectList, new { @class = "form-control", autocomplete = "off" })
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <div class="d-flex flex-row-reverse">
-                            <div class="p-2">
-                                <button id="AsignarGrupo" name="add_dictionary" type="submit" class="btn btn-info">
-                                    A馻dir
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                // Alertas de Error o Validaci髇 al Asignar Grupos
-                <div class="box-body">
-                    @if (TempData["SuccessMessage"] != null)
-                    {
-                        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
-                    }
-                    @if (!ViewData.ModelState.IsValid)
-                    {
-                        foreach (var state in ViewData.ModelState.Values)
-                        {
-                            foreach (var error in state.Errors)
-                            {
-                                <div class="alert alert-danger">@error.ErrorMessage</div>
-                            }
-                        }
-                    }
-                </div>
-
-                <div class="table-responsive">
-                    <table id="myTable" class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>Nombres</th>
-                                <th>Usuario</th>
-                                <th>Eliminar</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach (var item in Model.ClasificationGroups)
-                            {
-                                <tr>
-                                    <td>@Html.DisplayFor(modelItem => item.Agent_EmployeesGroups.Nombre)</td>
-                                    <td>
-                                        <a class="btn btn-outline-secondary" href="@Url.Action("Edit", "Agent_EmployeesGroups", new { id = item.idemployeesGroup })">
-                                            <i class="mdi mdi-account-circle"></i>
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <a class="btn btn-outline-secondary" href="@Url.Action("DeleteProgramGroup", "Agent_ProgramClasification", new { Id = item.Id, idprogramclasification = item.idprogramclasification })">
-                                            <i class="fa fa-trash"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
-    </div>
+<div class="space-y-6">
+    @if (groups.Count > 0) {
+        @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+    } else {
+        @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", new DetailComponent {
+            Title = "Grupos del programa", Description = "No hay grupos disponibles para asignar a esta clasificaci贸n.",
+            Actions = new System.Collections.Generic.List<TableCell> { TableCell.Link("Volver a clasificaciones", Url.Action("Index", "Agent_ProgramClasification")) }
+        })
+    }
+    @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
 </div>
 
-<script src="~/Scripts/jquery-3.4.1.min.js"></script>
-<script>
-    $(document).ready(function () {
-        const dropdown = $('#idemployeesGroup');
-        const addButton = $('#AsignarGrupo');
-
-        function checkDropdown() {
-            addButton.prop('disabled', dropdown.children('option').length === 0);
-        }
-
-        dropdown.on('change', checkDropdown);
-        checkDropdown();
-    });
-</script>

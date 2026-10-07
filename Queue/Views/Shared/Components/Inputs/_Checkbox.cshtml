@@ -1,0 +1,6 @@
+﻿@model Queue.Models.Components.CheckboxInput
+@{ var attributes = Queue.Models.Components.InputAttributes.For(Html, Model); }
+<div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+    @Html.CheckBox(Model.Name, Convert.ToBoolean(Model.Value ?? false), attributes)
+    @Html.Label(Model.Name, Model.Label, new { @class = "cursor-pointer text-sm font-medium text-slate-700" })
+</div>

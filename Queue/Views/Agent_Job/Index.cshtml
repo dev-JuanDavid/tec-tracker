@@ -1,71 +1,21 @@
 ﻿@model IEnumerable<Queue.Models.Agent_Job>
-
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
-    ViewBag.Title = "Index";
+    ViewBag.Title = "Cargos";
+    ViewBag.NavTitle = "Cargos";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var table = TableComponent.From(Model ?? Enumerable.Empty<Agent_Job>(),
+        new TableColumn<Agent_Job> { Title = "Cargo", Cell = item => TableCell.Text(item.Cargo) },
+        new TableColumn<Agent_Job> { Title = "Descripción", Cell = item => TableCell.Text(item.Descripcion) },
+        new TableColumn<Agent_Job> { Title = "Estado", Cell = item => TableCell.Badge(item.status ? "Activo" : "Inactivo", item.status) },
+        new TableColumn<Agent_Job> { Title = "Acciones", Cell = item => TableCell.Link("Editar", Url.Action("Edit", "Agent_Job", new { id = item.idJob })) });
+    table.Title = "Cargos";
+    table.Description = "Organiza los cargos y consulta su estado en un solo lugar.";
+    table.CreateUrl = Url.Action("Create", "Agent_Job");
+    table.CreateLabel = "Nuevo cargo";
+    table.EmptyMessage = "Crea tu primer cargo para comenzar a organizar tu equipo.";
 }
+@Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
 
-<div class="max-w-6xl mx-auto p-6">
-    <div class="bg-white rounded-2xl shadow-lg p-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between border-b pb-4 mb-6">
-            <h4 class="text-xl font-semibold text-gray-800">Cargos</h4>
-            <a href="@Url.Action("Create", "Agent_Job")"
-               class="inline-flex items-center px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-600 transition">
-                <i class="fa fa-plus mr-2"></i> Nuevo Cargo
-            </a>
-        </div>
-
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table id="myTable" class="min-w-full border border-gray-200 divide-y divide-gray-200">
-                <thead class="bg-gray-100 text-gray-700 text-sm">
-                    <tr>
-                        <th class="px-4 py-2 text-left">@Html.DisplayNameFor(model => model.Cargo)</th>
-                        <th class="px-4 py-2 text-left">@Html.DisplayNameFor(model => model.Descripcion)</th>
-                        <th class="px-4 py-2 text-left">@Html.DisplayNameFor(model => model.status)</th>
-                        <th class="px-4 py-2 text-center">Edit</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-                    @foreach (var item in Model)
-                    {
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Cargo)</td>
-                            <td class="px-4 py-2">@Html.DisplayFor(modelItem => item.Descripcion)</td>
-                            <td class="px-4 py-2">
-                                @if (item.status == true)
-                                {
-                                    <span class="px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Inactive</span>
-                                }
-                            </td>
-                            <td class="px-4 py-2 text-center">
-                                <a href="@Url.Action("Edit","Agent_Job", new { id = item.idJob })"
-                                   class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
-                                    <i class="fa fa-edit"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.flash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/2.5.0/jszip.min.js"></script>
-    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/pdfmake.min.js"></script>
-    <script src="https://cdn.rawgit.com/bpampuch/pdfmake/0.1.18/build/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/1.2.2/js/buttons.print.min.js"></script>
-    <script>
-        $('#myTable').DataTable();
-    </script>
-}

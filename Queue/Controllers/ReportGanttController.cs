@@ -166,13 +166,19 @@ namespace Queue.Controllers
             return View();
         }
 
-        public async Task<JsonResult> NewChart(DateTime? dateFrom, DateTime? dateTo, int periods, string[] user)
+        [HttpPost]
+        public async Task<JsonResult> NewChart(DateTime? dateFrom, DateTime? dateTo, int periods, string[] user, Guid? idgruoup)
         {
             //try
             //{
             var company = Request.RequestContext.HttpContext.Session["Company"].ToString();
             OperationController opc = new OperationController();
-            var result = await opc.GetactivityData(company, dateFrom.Value, dateTo.Value, periods, user);
+            if (!dateFrom.HasValue || !dateTo.HasValue || dateFrom.Value.Date > dateTo.Value.Date || !new[] { 5, 10, 30, 45, 60, 120 }.Contains(periods))
+            {
+                Response.StatusCode = 400;
+                return Json(new { message = "Revisa las fechas y el intervalo de la consulta." });
+            }
+            var result = await opc.GetactivityData(company, dateFrom.Value, dateTo.Value, periods, user, idgruoup ?? Guid.Empty);
             return Json(result, JsonRequestBehavior.AllowGet);
             //}
             //catch (Exception err)

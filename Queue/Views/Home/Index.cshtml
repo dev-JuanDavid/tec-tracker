@@ -1,295 +1,146 @@
 ﻿@model Queue.Models.DashBoardStats
-@{ ViewBag.Title = "Home Page"; }
+@using Queue.Models.Components
+@using System.Linq
 @{
-    var listUsuarios = new List<object>() { new { Usuario = "Seleccione", Nombre = "" } };
-    var userList = ViewData["UserList"] == null ? new SelectList(listUsuarios, "Usuario", "Nombre") : ViewData["UserList"];
-    // Recuperar filtros seleccionados
-    var selectedGroup = Request["idgroup"];
-    var selectedUser = Request["user"];
+    ViewBag.Title = "Panel de actividad";
+    ViewBag.NavTitle = "Panel de actividad";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var groups = (ViewBag.idgroup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).Select(g => new SelectListItem { Value = g.Value, Text = g.Value == Guid.Empty.ToString() ? "Todos los grupos" : g.Text }).ToList();
+    var users = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var filters = new System.Collections.Generic.List<IFormInput> {
+        new DateInput { Name = "DateFrom", Label = "Desde", Value = Model.DateFrom, Required = true },
+        new DateInput { Name = "DateTo", Label = "Hasta", Value = Model.DateTo, Required = true },
+        new SelectInput { Name = "idgroup", Label = "Grupo", Options = groups, Value = Model.idgroup, EmptyLabel = null },
+        new SelectInput { Name = "ddlUsers", Label = "Empleado", Options = users, Value = Model.ddlUsers, EmptyLabel = "Todos los empleados" }
+    };
+    var detail = TableComponent.From(Model.DataPerUser.OrderByDescending(u => u.TotalHours),
+        new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Empleado", Cell = u => TableCell.Text(u.User) },
+        new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Tiempo total", Cell = u => TableCell.Text(FormatTime(u.TotalHours)) },
+        new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Productivo", Cell = u => TableCell.Text(FormatTime(u.ProductiveTime)) },
+        new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Improductivo", Cell = u => TableCell.Text(FormatTime(u.ImproductiveTime)) },
+        new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Neutral", Cell = u => TableCell.Text(FormatTime(u.NeutralTime)) },
+        new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Sin clasificar", Cell = u => TableCell.Text(FormatTime(u.UnclasifyTime)) });
+    detail.Title = "Detalle por empleado";
+    detail.Description = "Tiempo registrado durante el período seleccionado.";
+    detail.EmptyMessage = "No hay actividad de empleados para estos filtros.";
+    var metrics = new[] {
+        new MetricComponent { Label = "Actividad productiva", Value = Model.resume.ProductiveTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Del tiempo registrado" },
+        new MetricComponent { Label = "Actividad improductiva", Value = Model.resume.ImproductiveTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Del tiempo registrado" },
+        new MetricComponent { Label = "Actividad neutral", Value = Model.resume.NeutralTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Del tiempo registrado" },
+        new MetricComponent { Label = "Sin clasificar", Value = Model.resume.UnclasifyTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Pendiente de clasificación" }
+    };
+    var graphJson = Json.Encode(Model.graph).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
+    var resumeJson = Json.Encode(new[] { Model.resume.ProductiveTime, Model.resume.ImproductiveTime, Model.resume.NeutralTime, Model.resume.UnclasifyTime });
 }
-
-<!-- Tailwind -->
-<script src="https://cdn.tailwindcss.com"></script>
-
-<!-- FontAwesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-<!-- Google Charts -->
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
-<!-- jQuery -->
-<script src="~/Scripts/jquery-3.4.1.min.js"></script>
-
-<div class="w-full gap-6" id="dashboard">
-    <div class="rounded-2xl p-6 gap-6">
-        @using (Html.BeginForm("Index", "Home", FormMethod.Post, new { id = "frm_register" }))
-        {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Fecha Desde -->
-                <div class="flex-grow min-w-[180px]">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        @Html.DisplayNameFor(model => model.DateFrom)
-                    </label>
-                    @Html.TextBoxFor(model => model.DateFrom, new
-                    {
-                        @class = "w-full py-2 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 hover:border-blue-500 transition duration-200 text-sm shadow-sm",
-                        type = "date"
-                    })
-                </div>
-
-                <!-- Fecha Hasta -->
-                <div class="flex-grow min-w-[180px]">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        @Html.DisplayNameFor(model => model.DateTo)
-                    </label>
-                    @Html.TextBoxFor(model => model.DateTo, new
-                    {
-                        @class = "w-full py-2 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 hover:border-blue-500 transition duration-200 text-sm shadow-sm",
-                        type = "date"
-                    })
-                </div>
-
-                <!-- Grupos -->
-                <div class="flex-grow min-w-[140px]">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Grupos</label>
-                    <div class="relative w-full">
-                        @Html.DropDownList("idgroup", ViewBag.idgroup as SelectList, "Seleccione Grupo",
-                            new { @class = "w-full py-2 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 hover:border-blue-500 transition duration-200 text-sm shadow-sm" })
-                    </div>
-                </div>
-
-                <!-- Empleados -->
-                <div class="flex-grow min-w-[140px]">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Empleados</label>
-                    <div class="relative w-full">
-                        @Html.DropDownList("ddlUsers", userList as SelectList, "Todos",
-                            new { @class = "w-full py-2 px-4 border border-gray-300 rounded-lg bg-white text-gray-700 hover:border-blue-500 transition duration-200 text-sm shadow-sm", id = "listUsers" })
-                    </div>
-                </div>
-            </div>
-
-            <!-- Botones -->
-            <div class="flex justify-end mt-6 space-x-4">
-                <button id="add_Employee" type="submit"
-                        class="w-full md:w-auto py-2 px-6 bg-white text-gray-700 font-semibold rounded-lg shadow-sm hover:border-blue-500 border border-gray-300 transition duration-200 text-sm flex items-center justify-center">
-                    <i class="fa-solid fa-circle-play mr-2"></i>
-                    Filtrar
-                </button>
-                <button id="create_pdf" type="button"
-                        class="w-full md:w-auto py-2 px-6 bg-white text-gray-700 font-semibold rounded-lg shadow-sm hover:border-red-500 border border-gray-300 transition duration-200 text-sm flex items-center justify-center">
-                    <i class="fa-solid fa-file-pdf text-lg mr-2 text-red-600"></i>
-                    Generar PDF
-                </button>
-            </div>
-        }
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
-        <!-- KPI -->
-        <div class="md:col-span-1 space-y-6">
-            <div class="bg-white border rounded-lg p-4 flex items-center justify-between min-h-40">
-                <div>
-                    <h3 class="text-sm text-gray-500">Productivo</h3>
-                    <p class="text-2xl font-bold">@Model.resume.ProductiveTime %</p>
-                </div>
-                <i class="fa-solid fa-gauge-high text-green-500 text-4xl"></i>
-            </div>
-
-            <div class="bg-white border rounded-lg p-4 flex items-center justify-between min-h-40">
-                <div>
-                    <h3 class="text-sm text-gray-500">Improductivo</h3>
-                    <p class="text-2xl font-bold">@Model.resume.ImproductiveTime %</p>
-                </div>
-                <i class="fa-solid fa-circle-xmark text-red-500 text-4xl"></i>
-            </div>
-
-            <div class="bg-white border rounded-lg p-4 flex items-center justify-between min-h-40">
-                <div>
-                    <h3 class="text-sm text-gray-500">Neutral</h3>
-                    <p class="text-2xl font-bold">@Model.resume.NeutralTime %</p>
-                </div>
-                <i class="fa-solid fa-circle text-gray-500 text-4xl"></i>
-            </div>
-
-            <div class="bg-white border rounded-lg p-4 flex items-center justify-between min-h-40">
-                <div>
-                    <h3 class="text-sm text-gray-500">Sin Clasificar</h3>
-                    <p class="text-2xl font-bold">@Model.resume.UnclasifyTime %</p>
-                </div>
-                <i class="fa-solid fa-circle-question text-yellow-500 text-4xl"></i>
-            </div>
-        </div>
-
-        <!-- Gráfica y Tarjetas de Usuarios -->
-        <div class="md:col-span-3 space-y-6">
-            <div class="bg-white shadow rounded-lg p-6">
-                <h2 class="text-lg font-semibold mb-4">Aplicaciones más usadas</h2>
-                <div id="chart_wrap">
-                    <div id="columnchart_values" class="w-full h-96"></div>
-                </div>
-            </div>
-
-            <!-- Tarjetas de Usuarios -->
-            <div class="bg-white shadow rounded-lg p-6">
-                <h2 class="text-lg font-semibold mb-4">Detalle por usuario</h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    @foreach (var item in Model.DataPerUser.OrderByDescending(u => u.TotalHours))
-                    {
-                        string circleColor = "bg-gray-500"; // Default
-                        if (item.ProductiveTime >= item.ImproductiveTime && item.ProductiveTime >= item.NeutralTime && item.ProductiveTime >= item.UnclasifyTime)
-                        {
-                            circleColor = "bg-green-500";
-                        }
-                        else if (item.ImproductiveTime >= item.ProductiveTime && item.ImproductiveTime >= item.NeutralTime && item.ImproductiveTime >= item.UnclasifyTime)
-                        {
-                            circleColor = "bg-red-500";
-                        }
-                        else if (item.NeutralTime >= item.ProductiveTime && item.NeutralTime >= item.ImproductiveTime && item.NeutralTime >= item.UnclasifyTime)
-                        {
-                            circleColor = "bg-gray-400";
-                        }
-                        else if (item.UnclasifyTime >= item.ProductiveTime && item.UnclasifyTime >= item.ImproductiveTime && item.UnclasifyTime >= item.NeutralTime)
-                        {
-                            circleColor = "bg-yellow-500";
-                        }
-
-                        <div class="bg-gray-50 rounded-xl shadow p-4 border hover:shadow-lg transition duration-200 flex flex-col justify-between">
-                            <!-- Encabezado con circulito y nombre -->
-                            <div class="flex items-center mb-3">
-                                <span class="w-3 h-3 rounded-full mr-2 @circleColor"></span>
-                                <h3 class="text-lg font-semibold text-gray-800">@item.User</h3>
-                            </div>
-
-                            <!-- Total Horas -->
-                            <p class="text-sm text-gray-600 mb-3">
-                                <span class="font-semibold text-blue-600">Total:</span>
-                                @FormatTime(item.TotalHours)
-                            </p>
-
-                            <!-- Métricas -->
-                            <div class="space-y-1 text-sm">
-                                <p class="flex justify-between">
-                                    <span class="font-semibold text-green-600">Productivas:</span>
-                                    <span>@FormatTime(item.ProductiveTime)</span>
-                                </p>
-                                <p class="flex justify-between">
-                                    <span class="font-semibold text-red-600">Improductivas:</span>
-                                    <span>@FormatTime(item.ImproductiveTime)</span>
-                                </p>
-                                <p class="flex justify-between">
-                                    <span class="font-semibold text-gray-600">Neutrales:</span>
-                                    <span>@FormatTime(item.NeutralTime)</span>
-                                </p>
-                                <p class="flex justify-between">
-                                    <span class="font-semibold text-yellow-600">No Clasificadas:</span>
-                                    <span>@FormatTime(item.UnclasifyTime)</span>
-                                </p>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    google.charts.load("current", { packages: ['corechart'] });
-    google.charts.setOnLoadCallback(drawChartApp);
-
-    function drawChartApp() {
-        var data = new google.visualization.DataTable();
-        data.addColumn('string', 'Aplicación');
-        data.addColumn('number', 'Porcentaje de Uso');
-        data.addColumn({ type: 'string', role: 'style' });
-
-        var datArrary = [];
-        var data_ = @Html.Raw(Json.Encode(Model.graph));
-        $.each(data_, function (index, value) {
-            datArrary.push([value.element, value.decimalvalue, value.color]);
-        });
-        data.addRows(datArrary);
-
-        var options = {
-            title: "5 aplicaciones más usadas",
-            titleTextStyle: { color: "black", fontName: "Nunito Sans", fontSize: 20 },
-            width: "100%",
-            height: 400,
-            bar: { groupWidth: "70%" },
-            legend: { position: "none" }
-        };
-
-        var chart = new google.visualization.BarChart(document.getElementById("columnchart_values"));
-        chart.draw(data, options);
-    }
-
-    const groupSelect = document.getElementById("idgroup");
-    const userSelect = document.getElementById("listUsers");
-    let cachedGroups = {};
-
-    groupSelect.addEventListener("change", function () {
-        loadUsers(this.value, "");
-    });
-
-    function loadUsers(idEmployeeGroup, selectedUser) {
-        if (!idEmployeeGroup) {
-            userSelect.innerHTML = "<option value='' selected>Seleccione</option>";
-            return;
-        }
-
-        if (cachedGroups[idEmployeeGroup]) {
-            fillUsers(cachedGroups[idEmployeeGroup], selectedUser);
-            return;
-        }
-
-        fetch("@Url.Action("GetUserByArea", "Operation")", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value || ""
-            },
-            body: JSON.stringify({ idGroupEmployee: idEmployeeGroup })
-        })
-        .then(response => response.json())
-        .then(data => {
-            cachedGroups[idEmployeeGroup] = data;
-            fillUsers(data, selectedUser);
-        })
-        .catch(error => console.error("Error al cargar usuarios:", error));
-    }
-
-    function fillUsers(data, selectedUser) {
-        userSelect.innerHTML = "<option value='' selected>Seleccione</option>";
-        data.forEach(user => {
-            const option = document.createElement("option");
-            option.value = user.Value;
-            option.textContent = user.Text;
-            if (selectedUser && selectedUser === user.Value) {
-                option.selected = true;
-            }
-            userSelect.appendChild(option);
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const selectedGroup = "@selectedGroup";
-        const selectedUser = "@selectedUser";
-
-        if (selectedGroup && selectedGroup !== "") {
-            groupSelect.value = selectedGroup;
-            loadUsers(selectedGroup, selectedUser);
-        }
-    })
-</script>
-
-@functions {
-    string FormatTime(double time)
+<div id="dashboard" class="space-y-6">
+    <header class="flex flex-wrap items-center justify-between gap-4">
+        <div><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Resumen del equipo</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Panel de actividad</h1><p class="mt-2 text-sm text-slate-500">Explora cómo se distribuye el tiempo de trabajo de tu empresa.</p></div>
+        <button id="dashboard-print" type="button" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">Imprimir o guardar PDF</button>
+    </header>
+    @if (ViewBag.restdaysmsg != null)
     {
-        TimeSpan t = TimeSpan.FromHours(time);
-        if (t.TotalDays >= 1) return string.Format("{0}d {1}h {2}m {3}s", (int)t.TotalDays, t.Hours, t.Minutes, t.Seconds);
-        if (t.TotalHours >= 1) return string.Format("{0}h {1}m {2}s", (int)t.TotalHours, t.Minutes, t.Seconds);
-        if (t.TotalMinutes >= 1) return string.Format("{0}m {1}s", (int)t.TotalMinutes, t.Seconds);
-        return string.Format("{0}s", (int)t.TotalSeconds);
+        <p class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="status">@ViewBag.restdaysmsg</p>
+    }
+    <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+        <h2 class="mb-5 text-sm font-semibold text-slate-800">Filtrar actividad</h2>
+        <form id="dashboard-filters" action="@Url.Action("Index", "Home")" method="get">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach (var input in filters) { @Html.Partial("~/Views/Shared/Components/Inputs/_Field.cshtml", input, new ViewDataDictionary(ViewData)) }
+            </div>
+            <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <p id="filter-status" class="text-sm text-slate-500" role="status" aria-live="polite"></p>
+                <button type="submit" class="rounded-xl bg-[#6d5fb9] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#594b9c] focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">Aplicar filtros</button>
+            </div>
+        </form>
+    </section>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        @foreach (var metric in metrics) { @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", metric) }
+    </div>
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div class="min-w-0 xl:col-span-2">@Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "applications-chart", Title = "Aplicaciones más usadas", Description = "Las cinco aplicaciones con mayor participación en el tiempo registrado." })</div>
+        @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "activity-chart", Title = "Distribución de actividad", Description = "Participación por clasificación del tiempo." })
+    </div>
+    @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", detail)
+</div>
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@5.3.6/dist/apexcharts.min.js"></script>
+<script>
+(function () {
+    'use strict';
+    var apps = @Html.Raw(graphJson);
+    var activity = @Html.Raw(resumeJson);
+    var labels = ['Productivo', 'Improductivo', 'Neutral', 'Sin clasificar'];
+    var percentage = function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 2 }) + ' %'; };
+    function showChart(id, options, hasData) {
+        var status = document.getElementById(id + '_status');
+        if (!hasData) { document.getElementById(id).classList.add('hidden'); status.textContent = 'No hay actividad para el período seleccionado.'; return; }
+        if (!window.ApexCharts) { status.textContent = 'No se pudo cargar la gráfica. Los datos siguen disponibles en el resumen.'; return; }
+        new ApexCharts(document.getElementById(id), options).render().catch(function () { status.textContent = 'No se pudo mostrar la gráfica.'; });
+    }
+    showChart('applications-chart', {
+        chart: { type: 'bar', height: 340, toolbar: { show: false }, fontFamily: 'inherit' },
+        series: [{ name: 'Uso', data: apps.map(function (a) { return { x: a.element, y: Number(a.decimalvalue) }; }) }],
+        colors: ['#6d5fb9'], plotOptions: { bar: { horizontal: true, borderRadius: 5, barHeight: '55%' } },
+        dataLabels: { enabled: true, formatter: percentage },
+        xaxis: { min: 0, max: 100, labels: { formatter: percentage } },
+        grid: { borderColor: '#f1f5f9' }, tooltip: { y: { formatter: percentage } },
+        noData: { text: 'Sin datos' }
+    }, apps.length > 0);
+    showChart('activity-chart', {
+        chart: { type: 'donut', height: 340, toolbar: { show: false }, fontFamily: 'inherit' },
+        series: activity.map(Number), labels: labels,
+        colors: ['#6d5fb9', '#e87979', '#94a3b8', '#f0bd62'],
+        legend: { position: 'bottom' }, stroke: { width: 3 },
+        dataLabels: { enabled: false }, tooltip: { y: { formatter: percentage } },
+        plotOptions: { pie: { donut: { size: '72%' } } }, noData: { text: 'Sin datos' }
+    }, activity.some(function (value) { return Number(value) > 0; }));
+    var group = document.getElementById('idgroup');
+    var employee = document.getElementById('ddlUsers');
+    var status = document.getElementById('filter-status');
+    var pending;
+    group.addEventListener('change', function () {
+        if (pending) pending.abort();
+        employee.replaceChildren(new Option('Todos los empleados', ''));
+        status.textContent = '';
+        if (!group.value || group.value === '00000000-0000-0000-0000-000000000000') { employee.disabled = false; return; }
+        pending = new AbortController();
+        employee.disabled = true;
+        status.textContent = 'Cargando empleados…';
+        fetch('@Url.Action("GetUserByArea", "Home")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idGroupEmployee: group.value }), signal: pending.signal
+        }).then(function (response) {
+            if (!response.ok || response.redirected) throw new Error('Respuesta no válida');
+            return response.json();
+        }).then(function (data) {
+            if (!Array.isArray(data)) throw new Error('Respuesta no válida');
+            data.forEach(function (user) { employee.add(new Option(user.Text, user.Value)); });
+            employee.disabled = false;
+            status.textContent = data.length ? '' : 'Este grupo no tiene empleados.';
+        }).catch(function (error) {
+            if (error.name === 'AbortError') return;
+            employee.disabled = false;
+            status.textContent = 'No se pudieron cargar los empleados. Vuelve a seleccionar el grupo para reintentar.';
+        });
+    });
+    document.getElementById('dashboard-filters').addEventListener('submit', function (event) {
+        var from = document.getElementById('DateFrom');
+        var to = document.getElementById('DateTo');
+        to.setCustomValidity('');
+        if (from.value > to.value) { event.preventDefault(); to.setCustomValidity('La fecha final debe ser igual o posterior a la fecha inicial.'); to.reportValidity(); }
+        if (employee.disabled) { event.preventDefault(); status.textContent = 'Espera a que termine la carga de empleados.'; }
+    });
+    document.getElementById('DateTo').addEventListener('input', function () { this.setCustomValidity(''); });
+    document.getElementById('DateFrom').addEventListener('input', function () { document.getElementById('DateTo').setCustomValidity(''); });
+    document.getElementById('dashboard-print').addEventListener('click', function () { window.print(); });
+})();
+</script>
+}
+@functions {
+    string FormatTime(double hours)
+    {
+        var time = TimeSpan.FromHours(hours);
+        return string.Format("{0} h {1} min {2} s", (int)time.TotalHours, time.Minutes, time.Seconds);
     }
 }
+

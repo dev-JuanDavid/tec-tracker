@@ -1,133 +1,41 @@
 ﻿@model IEnumerable<Queue.Models.HardwareReport>
-
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
-    ViewBag.Title = "HardwareReport";
+    ViewBag.Title = "Reporte de hardware";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var listUsuarios = new List<object>() { new { Usuario = "Seleccione", Nombre = "" } };
-    var userList = ViewData["UserList"] == null
-        ? new SelectList(listUsuarios, "Usuario", "Nombre")
-        : ViewData["UserList"];
+    var selectedGroup = Request["idgroup"];
+    var selectedUser = Request["user"];
+    var groups = (ViewBag.idgroup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).Select(g => new SelectListItem {
+        Value = g.Value, Text = g.Value == Guid.Empty.ToString() ? "Todos los grupos" : g.Text
+    }).ToList();
+    var form = new FormComponent {
+        Id = "hardware-report-filters", Title = "Consultar hardware", Description = "Selecciona un grupo o empleado para consultar los componentes registrados.",
+        ActionUrl = Url.Action("HardwareReport", "Operation"), UseGet = true, SubmitLabel = "Consultar reporte",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new SelectInput { Name = "idgroup", Label = "Grupo", Options = groups, Value = selectedGroup ?? Guid.Empty.ToString(), EmptyLabel = null },
+            new SelectInput { Name = "user", Label = "Empleado", Options = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>(), Value = selectedUser, EmptyLabel = "Todos los empleados", DependsOn = "idgroup", OptionsUrl = Url.Action("GetUserByArea", "Operation") }
+        }
+    };
+    var table = TableComponent.From(Model ?? Enumerable.Empty<HardwareReport>(),
+        new TableColumn<HardwareReport> { Title = "Tipo", Cell = component => TableCell.Text(component.type) },
+        new TableColumn<HardwareReport> { Title = "Componente", Cell = component => TableCell.Text(component.hardware) },
+        new TableColumn<HardwareReport> { Title = "Cantidad", Cell = component => TableCell.Text(component.quantity) },
+        new TableColumn<HardwareReport> { Title = "Acciones", Cell = component => TableCell.Link("Ver equipos", Url.Action("HardwareReportDetails", "Operation", new { hardware = component.hardware, idgroup = selectedGroup, user = selectedUser })) });
+    table.Title = "Hardware registrado";
+    table.Description = "Las exportaciones incluyen todos los registros que coinciden con la búsqueda.";
+    table.EmptyMessage = "No hay componentes para los filtros seleccionados.";
+    table.EnableExport = true;
 }
-
-<div class="p-6" id="hardwareReport">
-    <h2 class="text-xl font-semibold text-gray-800 mb-6">Reporte Hardware</h2>
-
-    @using (Html.BeginForm("HardwareReport", "Operation"))
-    {
-        <div class="flex flex-col md:flex-row gap-4 mb-6">
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700">Usuarios</label>
-                @Html.DropDownList("user", userList as SelectList, "Seleccione",
-                    new { @class = "w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500", id = "listUsers" })
-            </div>
-
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-700">Grupos</label>
-                @Html.DropDownList("idgroup", null,
-                    new { @class = "w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500", id = "idgroup" })
-            </div>
-
-            <div class="flex items-end">
-                <button type="submit"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-lg shadow transition">
-                    Consultar
-                </button>
-            </div>
-        </div>
-    }
-
-    <div class="bg-white shadow-md rounded-xl overflow-hidden">
-        <div class="px-6 py-4 border-b">
-            <h3 class="text-sm font-semibold text-gray-700">Detalle Hardware</h3>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left text-gray-700">
-                <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
-                    <tr>
-                        <th class="px-6 py-3">Tipo</th>
-                        <th class="px-6 py-3">Hardware</th>
-                        <th class="px-6 py-3">Cantidad</th>
-                        <th class="px-6 py-3 text-center">Acción</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    @if (Model != null && Model.Any())
-                    {
-                        foreach (var item in Model)
-                        {
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-3 font-medium text-gray-900">@item.type</td>
-                                <td class="px-6 py-3">@item.hardware</td>
-                                <td class="px-6 py-3">@item.quantity</td>
-                                <td class="px-6 py-3 text-center">
-                                    <a href="@Url.Action("HardwareReportDetails", "Operation", new { hardware = item.hardware, idgruop = item.idgroup, user= Request["user"]})"
-                                       class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition">
-                                        <i class="fa fa-eye"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="4" class="px-6 py-4 text-center text-gray-500">No hay registros</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Paginación -->
-        <div class="flex items-center justify-between px-6 py-4 border-t text-sm text-gray-600">
-            <div>
-                <label>Cantidad</label>
-                <select class="ml-2 border rounded-lg px-2 py-1 focus:ring-2 focus:ring-indigo-500">
-                    <option>10</option>
-                    <option>25</option>
-                    <option>50</option>
-                </select>
-            </div>
-            <div class="flex items-center space-x-2">
-                <button class="px-2 py-1 rounded hover:bg-gray-100">&laquo;</button>
-                <span>1 de 10</span>
-                <button class="px-2 py-1 rounded hover:bg-gray-100">&raquo;</button>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    <header>
+        <p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Inventario de equipos</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Reporte de hardware</h1>
+        <p class="mt-2 text-sm text-slate-500">Consulta los componentes registrados y los equipos a los que pertenecen.</p>
+    </header>
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+    @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
 </div>
 
-@section Scripts {
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const groupSelect = document.getElementById("idgroup");
-            const userSelect = document.getElementById("listUsers");
-
-            groupSelect.addEventListener("change", function () {
-                const idEmployeeGroup = this.value;
-
-                fetch("@Url.Action("GetUserByArea")", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value || ""
-                    },
-                    body: JSON.stringify({ IdGroupEmployee: idEmployeeGroup })
-                })
-                .then(response => response.json())
-                    .then(data => {
-                        console.log("Usuarios recibidos:", data);
-                    userSelect.innerHTML = "<option selected>Seleccione</option>";
-                    data.forEach(row => {
-                        const option = document.createElement("option");
-                        option.value = row.Value;
-                        option.textContent = row.Text;
-                        userSelect.appendChild(option);
-                    });
-                })
-                .catch(error => console.error("Error al cargar usuarios:", error));
-            });
-        });
-    </script>
-}

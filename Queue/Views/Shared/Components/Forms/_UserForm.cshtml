@@ -1,0 +1,34 @@
+﻿@model Queue.Models.RegisterViewModel
+@using Queue.Models.Components
+@using System.Linq
+@{
+    var editing = Model != null && !string.IsNullOrWhiteSpace(Model.UserId);
+    var roles = (ViewBag.RoleID as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).Select(role => new SelectListItem {
+        Value = role.Value,
+        Text = role.Text == "SAdmin" ? "Superadministrador" : role.Text == "Admin" ? "Administrador" : role.Text == "Manager" ? "Responsable" : role.Text,
+        Selected = role.Selected, Disabled = role.Disabled
+    }).ToList();
+    var inputs = new System.Collections.Generic.List<IFormInput> {
+        new TextInput { Name = "FirstName", Label = "Nombre", Value = Model == null ? null : Model.FirstName, Required = true, Autocomplete = "given-name" },
+        new TextInput { Name = "LastName", Label = "Apellido", Value = Model == null ? null : Model.LastName, Required = true, Autocomplete = "family-name" },
+        new EmailInput { Name = "Email", Label = "Correo electrónico", Value = Model == null ? null : Model.Email, Required = true, Autocomplete = "email" },
+        new SelectInput { Name = "RoleID", Label = "Rol", Value = Model == null ? null : Model.RoleID, Options = roles, Required = true, EmptyLabel = "Selecciona un rol" }
+    };
+    if (editing) {
+        inputs.Add(new HiddenInput { Name = "UserId", Value = Model.UserId });
+        inputs.Add(new HiddenInput { Name = "IsLoged", Value = Model.IsLoged });
+        inputs.Add(new PasswordInput { Name = "Password", Label = "Nueva contraseña", Autocomplete = "new-password", Help = "Déjala vacía para conservar la contraseña actual." });
+        inputs.Add(new PasswordInput { Name = "ConfirmPassword", Label = "Confirmar nueva contraseña", Autocomplete = "new-password" });
+    }
+    var form = new FormComponent {
+        Id = "user-form",
+        Title = editing ? "Editar usuario" : "Nuevo usuario",
+        Description = editing ? "Actualiza los datos y el rol del usuario." : "La contraseña se generará automáticamente y se enviará por correo al usuario.",
+        ActionUrl = editing ? Url.Action("EditUser", "Manage") : Url.Action("Register", "Account"),
+        CancelUrl = Url.Action("UserList", "Manage"),
+        SubmitLabel = editing ? "Guardar cambios" : "Crear usuario",
+        Inputs = inputs
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+

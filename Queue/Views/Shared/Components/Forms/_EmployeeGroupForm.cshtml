@@ -1,0 +1,18 @@
+﻿@model Queue.Models.Agent_EmployeesGroups
+@using Queue.Models.Components
+@{
+    var editing = Model != null && Model.idemployeesGroup != Guid.Empty;
+    var inputs = new System.Collections.Generic.List<IFormInput> {
+        new TextInput { Name = "Nombre", Label = "Nombre del grupo", Value = Model == null ? null : Model.Nombre, Required = true, Placeholder = "Ej. Equipo de soporte" }
+    };
+    if (editing) { inputs.Add(new HiddenInput { Name = "idemployeesGroup", Value = Model.idemployeesGroup }); }
+    var form = new FormComponent {
+        Id = "employee-group-form", Title = editing ? "Editar grupo" : "Nuevo grupo",
+        Description = "Organiza a los empleados según su equipo o área de trabajo.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Agent_EmployeesGroups"),
+        CancelUrl = Url.Action("Index", "Agent_EmployeesGroups"),
+        SubmitLabel = editing ? "Guardar cambios" : "Crear grupo", Inputs = inputs
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+

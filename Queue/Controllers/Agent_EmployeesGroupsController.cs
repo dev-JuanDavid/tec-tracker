@@ -69,34 +69,9 @@ namespace Queue.Controllers
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
 
-            var company = Request.RequestContext.HttpContext.Session["Company"].ToString();
-            var guidCompany = Guid.Parse(company);
-            //Consulta el registro que voy a editar
-            Agent_EmployeesGroups agent_EmployeesGroups = db.Agent_EmployeesGroups.Find(id);
-
-           // Consultar relación por id del programa
-            List<Agent_Employee> asigemp = repositorio.ListUsuarioArea(guidCompany, id.Value);
-            //Consultar grupos
-            List<Agent_Employee> empl = db.Agent_Employee.Where(s => s.IdCompany == guidCompany).ToList();
-
-        
-
-           
-            //filtro los usuarios que actualmente se encuentran en el area de trabajo
-            foreach(Agent_Employee employee in asigemp)
-             {
-                 empl = empl.Where(f => f.idEmployee != employee.idEmployee).ToList();
-         
-             }
-
-
-            ViewBag.asigemp = asigemp;
-            ViewBag.idemployee = new SelectList(empl, "idEmployee", "Nombre").ToList();
-            agent_EmployeesGroups.Agent_EmployeeGroupsEmployee_list.AddRange(asigemp);
-            if (agent_EmployeesGroups == null)
-            {
-                return HttpNotFound();
-            }
+            var agent_EmployeesGroups = db.Agent_EmployeesGroups.Find(id);
+            if (agent_EmployeesGroups == null) return HttpNotFound();
+            PopulateEmployees(agent_EmployeesGroups);
             return View(agent_EmployeesGroups);
         }
 
@@ -123,7 +98,18 @@ namespace Queue.Controllers
                 else
                     Warning("Grupo ya existe", "");
             }
+            PopulateEmployees(agent_EmployeesGroups);
             return View(agent_EmployeesGroups);
+        }
+        private void PopulateEmployees(Agent_EmployeesGroups group)
+        {
+            var company = Guid.Parse(Session["Company"].ToString());
+            var assigned = repositorio.ListUsuarioArea(company, group.idemployeesGroup);
+            var assignedIds = assigned.Select(employee => employee.idEmployee).ToList();
+            var available = db.Agent_Employee.Where(employee => employee.IdCompany == company && !assignedIds.Contains(employee.idEmployee)).ToList();
+            ViewBag.idemployee = new SelectList(available, "idEmployee", "Nombre");
+            group.Agent_EmployeeGroupsEmployee_list.Clear();
+            group.Agent_EmployeeGroupsEmployee_list.AddRange(assigned);
         }
         [HttpPost]
         public ActionResult Addemployee(Guid idemployeesGroup, Guid idemployee)

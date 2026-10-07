@@ -1,117 +1,30 @@
 ﻿@model Queue.Models.Agent_EmployeesGroups
-
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
+    ViewBag.Title = "Editar grupo";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
-}
-
-<div class="flex flex-col gap-6">
-
-    <!-- Editar Grupo -->
-    <div class="bg-white shadow-md rounded-xl p-6">
-        <div class="flex items-center justify-between border-b pb-3 mb-4">
-            <h4 class="text-xl font-semibold text-gray-700">Editar Grupo Usuario</h4>
-            <a href="@Url.Action("Index", "Agent_EmployeesGroups")"
-               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow flex items-center gap-2 text-sm">
-                <i class="glyphicon glyphicon-chevron-left"></i> Back
-            </a>
-        </div>
-
-        @using (Html.BeginForm("Edit", "Agent_EmployeesGroups"))
-        {
-            @Html.AntiForgeryToken()
-            @Html.HiddenFor(m => m.idemployeesGroup)
-
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    @Html.LabelFor(model => model.Nombre)
-                </label>
-                @Html.EditorFor(model => model.Nombre, new { htmlAttributes = new { @class = "w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200" } })
-                <span class="text-red-500 text-xs">
-                    @Html.ValidationMessageFor(model => model.Nombre)
-                </span>
-            </div>
-
-            <div class="flex justify-end">
-                <button type="submit"
-                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg shadow">
-                    Editar
-                </button>
-            </div>
+    var assignment = new FormComponent {
+        Id = "group-assignment-form", Title = "Agregar empleado", Description = "Selecciona un empleado que todavía no forme parte de este grupo.",
+        ActionUrl = Url.Action("Addemployee", "Agent_EmployeesGroups"), SubmitLabel = "Agregar al grupo",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "idemployeesGroup", Value = Model.idemployeesGroup },
+            new SelectInput { Name = "idemployee", Label = "Empleado", Required = true, EmptyLabel = "Selecciona un empleado", Options = ViewBag.idemployee as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>() }
         }
-    </div>
-
-    <!-- Agregar Usuario -->
-    @using (Html.BeginForm("Addemployee", "Agent_EmployeesGroups"))
-    {
-        @Html.AntiForgeryToken()
-        @Html.HiddenFor(m => m.idemployeesGroup)
-
-        <div class="bg-white shadow-md rounded-xl p-6">
-            <div class="flex items-center justify-between border-b pb-3 mb-4">
-                <h4 class="text-xl font-semibold text-gray-700">Agregar Usuario</h4>
-            </div>
-
-            <div class="mb-6">
-                <label for="idemployee" class="block text-sm font-medium text-gray-700 mb-1">
-                    Usuario
-                </label>
-                @Html.DropDownList("idemployee", ViewBag.idemployee as SelectList,
-                    htmlAttributes: new
-                    {
-                        @class = "w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200",
-                        autocomplete = "off"
-                    })
-                <span class="text-red-500 text-xs">
-                    @Html.ValidationMessage("idemployee")
-                </span>
-            </div>
-
-            <div class="flex justify-end mb-6">
-                <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow">
-                    Agregar
-                </button>
-            </div>
-
-            <!-- Tabla de usuarios del grupo -->
-            <div class="overflow-x-auto">
-                <table class="min-w-full border border-gray-200 rounded-lg">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b">Nombres</th>
-                            <th class="px-4 py-2 text-left text-sm font-medium text-gray-600 border-b">Usuario</th>
-                            <th class="px-4 py-2 text-center text-sm font-medium text-gray-600 border-b">Eliminar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.Agent_EmployeeGroupsEmployee_list)
-                        {
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-2 text-gray-700 border-b">
-                                    @Html.DisplayFor(modelItem => item.Nombre)
-                                </td>
-                                <td class="px-4 py-2 text-gray-700 border-b">
-                                    @Html.DisplayFor(modelItem => item.Usuario)
-                                </td>
-                                <td class="px-4 py-2 text-center border-b">
-                                    <a href="@Url.Action("Deleteemployee", "Agent_EmployeesGroups",
-new { idEmployee = item.idEmployee, idAgent_EmployeeGroupsEmployee = Model.idemployeesGroup })"
-                                       class="btn btn-outline-secondary">
-                                        <i class="fa fa-trash"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
+    };
+    var table = TableComponent.From(Model.Agent_EmployeeGroupsEmployee_list,
+        new TableColumn<Agent_Employee> { Title = "Nombre", Cell = employee => TableCell.Text(employee.Nombre) },
+        new TableColumn<Agent_Employee> { Title = "Usuario", Cell = employee => TableCell.Text(employee.Usuario) },
+        new TableColumn<Agent_Employee> { Title = "Acciones", Cell = employee => TableCell.Link("Quitar del grupo", Url.Action("Deleteemployee", "Agent_EmployeesGroups", new { idEmployee = employee.idEmployee, idAgent_EmployeeGroupsEmployee = Model.idemployeesGroup })) });
+    table.Title = "Integrantes del grupo";
+    table.Description = "Consulta o modifica los empleados asociados.";
+    table.EmptyMessage = "Este grupo todavía no tiene empleados.";
+}
+<div class="space-y-6">
+    @Html.Partial("~/Views/Shared/Components/Forms/_EmployeeGroupForm.cshtml", Model, new ViewDataDictionary(ViewData))
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", assignment, new ViewDataDictionary(ViewData))
+    @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
 </div>
 
-<script src="~/Scripts/jquery-3.4.1.min.js"></script>
-<script>
-    $(document).ready(function () {
-        // Aquí podrías inicializar DataTable o algún script adicional si lo deseas
-    });
-</script>

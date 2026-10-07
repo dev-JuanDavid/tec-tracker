@@ -1,32 +1,14 @@
 ﻿@model Queue.Models.RoleViewModel
-
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Delete";
+    ViewBag.Title = "Eliminar rol";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var form = new FormComponent {
+        Title = "Eliminar rol", Description = "Confirma la eliminación del rol «" + Model.Name + "».",
+        ActionUrl = Url.Action("DeleteConfirmed", "Role"), CancelUrl = Url.Action("Index", "Role"), SubmitLabel = "Eliminar rol",
+        Inputs = new System.Collections.Generic.List<IFormInput> { new HiddenInput { Name = "Id", Value = Model.Id } }
+    };
 }
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 
-<h2>Delete</h2>
-
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>RoleViewModel</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-
-    </dl>
-
-    @using (Html.BeginForm()) {
-        @Html.AntiForgeryToken()
-
-        <div class="form-actions no-color">
-            <input type="submit" value="Delete" class="btn btn-default" /> |
-            @Html.ActionLink("Back to List", "Index")
-        </div>
-    }
-</div>

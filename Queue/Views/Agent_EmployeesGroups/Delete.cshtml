@@ -1,52 +1,16 @@
 ﻿@model Queue.Models.Agent_EmployeesGroups
-
+@using Queue.Models.Components
 @{
+    ViewBag.Title = "Eliminar grupo";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var form = new FormComponent {
+        Id = "delete-group-form", Title = "Eliminar grupo",
+        Description = "Confirma la eliminación del grupo «" + Model.Nombre + "».",
+        ActionUrl = Url.Action("Delete", "Agent_EmployeesGroups", new { id = Model.idemployeesGroup }),
+        CancelUrl = Url.Action("Index", "Agent_EmployeesGroups"), SubmitLabel = "Eliminar grupo",
+        Inputs = new System.Collections.Generic.List<IFormInput> { new HiddenInput { Name = "id", Value = Model.idemployeesGroup } }
+    };
 }
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 
-@using (Html.BeginForm("Delete", "Agent_EmployeesGroups", FormMethod.Post, new { id = "frm_register" }))
-{
-    @Html.AntiForgeryToken()
-    @Html.HiddenFor(m => m.idemployeesGroup)
-
-    <div class="max-w-4xl mx-auto p-6">
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-            <!-- Header -->
-            <div class="flex items-center justify-between border-b pb-4 mb-6">
-                <h4 class="text-xl font-semibold text-gray-800">Eliminar Grupo Usuario</h4>
-                <a href="@Url.Action("Index", "Agent_EmployeesGroups")"
-                   class="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition">
-                    <i class="glyphicon glyphicon-chevron-left mr-2"></i> Back
-                </a>
-            </div>
-
-            <!-- Body -->
-            <div class="space-y-4">
-                <div>
-                    @Html.LabelFor(model => model.Nombre, htmlAttributes: new { @class = "block text-sm font-medium text-gray-700" })
-                    @Html.ValidationMessageFor(model => model.Nombre, "", new { @class = "text-red-500 text-sm" })
-                    @Html.EditorFor(model => model.Nombre, new { htmlAttributes = new { @class = "mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" } })
-                </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex justify-end mt-6">
-                <button id="edit" name="add_dictionary" type="submit" value="Create"
-                        class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg shadow hover:bg-red-600 transition">
-                    Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script src="~/Scripts/jquery-3.4.1.min.js"></script>
-
-    <script>
-        $(document).ready(function () {
-            var status = '@ViewBag.status';
-            if (status == "False") {
-                $("#string_status").val("Inactive");
-            }
-        });
-    </script>
-}

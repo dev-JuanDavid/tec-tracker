@@ -35,9 +35,16 @@ namespace Queue.Controllers
             if (dsb.DateTo.Year <= 1900)
                 dsb.DateTo = DateTime.Today;
 
+            dasb.DateFrom = dsb.DateFrom;
+            dasb.DateTo = dsb.DateTo;
+            dasb.ddlUsers = dsb.ddlUsers;
+            dasb.idgroup = dsb.idgroup;
+
 
             OperationController opc = new OperationController();
-            List<BasicStatsDashboard> data = opc.GetDataForDashBoard(company.ToString(), dsb.DateFrom, dsb.DateTo, dsb.ddlUsers, dsb.idgroup);
+            if (dsb.DateFrom.Date > dsb.DateTo.Date)
+                ModelState.AddModelError("DateTo", "La fecha final debe ser igual o posterior a la inicial.");
+            List<BasicStatsDashboard> data = ModelState.IsValid ? opc.GetDataForDashBoard(company.ToString(), dsb.DateFrom, dsb.DateTo, dsb.ddlUsers, dsb.idgroup) : new List<BasicStatsDashboard>();
 
             //cuadritos de resumen
             dasb.resume = GetResume(data);

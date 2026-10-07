@@ -1,0 +1,10 @@
+﻿@model Queue.Models.Components.SelectInput
+@using System.Linq
+@{ var attributes = Queue.Models.Components.InputAttributes.For(Html, Model); }
+@{
+    var options = Model.Options.Select(option => new SelectListItem {
+        Value = option.Value, Text = option.Text, Disabled = option.Disabled, Group = option.Group,
+        Selected = Model.Value == null ? option.Selected : option.Value == Convert.ToString(Model.Value)
+    }).ToList();
+}
+@Html.DropDownList(Model.Name, options, Model.EmptyLabel, attributes)

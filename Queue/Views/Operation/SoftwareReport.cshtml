@@ -1,233 +1,34 @@
 ﻿@model IEnumerable<Queue.Models.SoftwareReport>
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
-    ViewBag.Title = "SoftwareReport";
+    ViewBag.Title = "Reporte de software";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
-
-    // Recuperar filtros seleccionados
     var selectedGroup = Request["idgroup"];
     var selectedUser = Request["user"];
+    var groups = (ViewBag.idgroup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).Select(g => new SelectListItem { Value = g.Value, Text = g.Value == Guid.Empty.ToString() ? "Todos los grupos" : g.Text }).ToList();
+    var form = new FormComponent {
+        Id = "software-report-filters", Title = "Consultar programas instalados", Description = "Selecciona un grupo o empleado para consultar su software.",
+        ActionUrl = Url.Action("SoftwareReport", "Operation"), UseGet = true, SubmitLabel = "Consultar reporte",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new SelectInput { Name = "idgroup", Label = "Grupo", Options = groups, Value = selectedGroup ?? Guid.Empty.ToString(), EmptyLabel = null },
+            new SelectInput { Name = "user", Label = "Empleado", Options = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>(), Value = selectedUser, EmptyLabel = "Todos los empleados", DependsOn = "idgroup", OptionsUrl = Url.Action("GetUserByArea", "Operation") }
+        }
+    };
+    var table = TableComponent.From(Model ?? Enumerable.Empty<SoftwareReport>(),
+        new TableColumn<SoftwareReport> { Title = "Programa", Cell = software => TableCell.Text(software.program) },
+        new TableColumn<SoftwareReport> { Title = "Cantidad de instalaciones", Cell = software => TableCell.Text(software.quantity) },
+        new TableColumn<SoftwareReport> { Title = "Acciones", Cell = software => TableCell.Link("Ver equipos", Url.Action("SoftwareReportDetails", "Operation", new { name = software.program, idgroup = selectedGroup, user = selectedUser })) });
+    table.Title = "Software instalado";
+    table.Description = "Las exportaciones incluyen los registros que coinciden con la búsqueda, de todas las páginas.";
+    table.EmptyMessage = "No hay programas para los filtros seleccionados.";
+    table.EnableExport = true;
 }
-
-<div class="p-6" id="softwareReport">
-    <div class="bg-white shadow-md rounded-2xl">
-        <!-- 🔹 Encabezado -->
-        <div class="border-b px-6 py-4">
-            <h4 class="text-lg font-semibold text-gray-800">Software Instalado</h4>
-        </div>
-
-        <div class="p-6">
-            @using (Html.BeginForm("SoftwareReport", "Operation", FormMethod.Get))
-            {
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- 🔹 Grupos -->
-                    <div>
-                        <label for="idgroup" class="block text-sm font-medium text-gray-700">Grupos</label>
-                        @Html.DropDownList("idgroup",
-                            ViewBag.idgroup as SelectList,
-                            htmlAttributes: new
-                            {
-                                @class = "w-full mt-2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500",
-                                id = "idgroup"
-                            })
-                    </div>
-
-                    <!-- 🔹 Usuarios -->
-                    <div>
-                        <label for="user" class="block text-sm font-medium text-gray-700">Usuarios</label>
-                        <select id="listUsers" name="user"
-                                class="w-full mt-2 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Seleccione</option>
-                        </select>
-                    </div>
-
-                    <!-- 🔹 Botón consultar -->
-                    <div class="flex items-end">
-                        <button type="submit"
-                                class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-indigo-700 transition">
-                            Consultar
-                        </button>
-                    </div>
-                </div>
-            }
-
-            <!-- 🔍 Buscador y Exportar -->
-            <div class="mt-8 mb-4 flex items-center justify-between">
-                <input type="text" id="searchInput" placeholder="Buscar programa..."
-                       class="w-1/3 px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-
-                <div class="space-x-2">
-                    <button id="exportExcel"
-                            class="bg-green-600 text-white px-4 py-2 rounded-lg shadow hover:bg-green-700 transition">
-                        Exportar Excel
-                    </button>
-                    <button id="exportPDF"
-                            class="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition">
-                        Exportar PDF
-                    </button>
-                </div>
-            </div>
-
-            <!-- 📊 Tabla -->
-            <div class="overflow-x-auto">
-                <table id="softwareTable"
-                       class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg shadow">
-                    <thead class="bg-gray-100 text-gray-700 text-sm uppercase">
-                        <tr>
-                            <th class="px-6 py-3 text-left">Programa</th>
-                            <th class="px-6 py-3 text-left">Cantidad</th>
-                            <th class="px-6 py-3 text-center">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-gray-200 text-sm">
-                        @if (Model != null && Model.Any())
-                        {
-                            foreach (var item in Model)
-                            {
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-3">@item.program</td>
-                                    <td class="px-6 py-3">@item.quantity</td>
-                                    <td class="px-6 py-3 text-center">
-                                        <a class="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition"
-                                           href="@Url.Action("SoftwareReportDetails", "Operation", new { name = item.program, idgroup = item.idgroup, user = selectedUser })">
-                                            <i class="fa fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="3" class="px-6 py-4 text-center text-gray-500">
-                                    No hay registros disponibles
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- 🔢 Paginación -->
-            <div class="flex justify-between items-center mt-4">
-                <button id="prevPage" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Anterior</button>
-                <span id="pageInfo" class="text-gray-600"></span>
-                <button id="nextPage" class="bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300">Siguiente</button>
-            </div>
-        </div>
-    </div>
+<div class="space-y-6">
+    <header><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Inventario de programas</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Reporte de software</h1><p class="mt-2 text-sm text-slate-500">Consulta los programas instalados y los equipos donde se utilizan.</p></header>
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+    @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
 </div>
 
-@section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-    <script>
-        const groupSelect = document.getElementById("idgroup");
-        const userSelect = document.getElementById("listUsers");
-
-        // ✅ Cargar usuarios dinámicamente al cambiar grupo
-        groupSelect.addEventListener("change", function () {
-            loadUsers(this.value, "");
-        });
-
-        // ✅ Función para cargar usuarios desde backend
-        function loadUsers(idEmployeeGroup, selectedUser) {
-            if (idEmployeeGroup && idEmployeeGroup !== "") {
-                fetch("@Url.Action("GetUserByArea", "Operation")", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]')?.value || ""
-                    },
-                    body: JSON.stringify({ idGroupEmployee: idEmployeeGroup })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    userSelect.innerHTML = "<option value='' selected>Seleccione</option>";
-                    data.forEach(user => {
-                        const option = document.createElement("option");
-                        option.value = user.Value;
-                        option.textContent = user.Text;
-                        if (selectedUser && selectedUser === user.Value) {
-                            option.selected = true;
-                        }
-                        userSelect.appendChild(option);
-                    });
-                })
-                .catch(error => console.error("Error al cargar usuarios:", error));
-            } else {
-                userSelect.innerHTML = "<option value='' selected>Seleccione</option>";
-            }
-        }
-
-        // ✅ Restaurar selección al recargar la página
-        document.addEventListener("DOMContentLoaded", function () {
-            const selectedGroup = "@selectedGroup";
-            const selectedUser = "@selectedUser";
-
-            if (selectedGroup && selectedGroup !== "") {
-                groupSelect.value = selectedGroup;
-                loadUsers(selectedGroup, selectedUser);
-            }
-        });
-
-        // ✅ Paginación
-        const rowsPerPage = 10;
-        let currentPage = 1;
-        const tableBody = document.getElementById("tableBody");
-        const rows = tableBody.querySelectorAll("tr");
-        const totalPages = Math.ceil(rows.length / rowsPerPage);
-
-        function renderTable() {
-            rows.forEach((row, index) => {
-                row.style.display =
-                    (index >= (currentPage - 1) * rowsPerPage && index < currentPage * rowsPerPage)
-                        ? "" : "none";
-            });
-            document.getElementById("pageInfo").textContent = `Página ${currentPage} de ${totalPages}`;
-        }
-
-        document.getElementById("prevPage").addEventListener("click", () => {
-            if (currentPage > 1) { currentPage--; renderTable(); }
-        });
-        document.getElementById("nextPage").addEventListener("click", () => {
-            if (currentPage < totalPages) { currentPage++; renderTable(); }
-        });
-
-        renderTable();
-
-        // ✅ Búsqueda
-        document.getElementById("searchInput").addEventListener("keyup", function () {
-            const filter = this.value.toLowerCase();
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(filter) ? "" : "none";
-            });
-        });
-
-        // ✅ Exportar a Excel
-        document.getElementById("exportExcel").addEventListener("click", () => {
-            const wb = XLSX.utils.table_to_book(document.getElementById("softwareTable"));
-            XLSX.writeFile(wb, "SoftwareReport.xlsx");
-        });
-
-        // ✅ Exportar a PDF
-        document.getElementById("exportPDF").addEventListener("click", () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("Reporte de Software Instalado", 20, 20);
-
-            let y = 40;
-            rows.forEach(row => {
-                if (row.style.display !== "none") {
-                    const cols = row.querySelectorAll("td");
-                    let text = Array.from(cols).map(td => td.innerText).join(" | ");
-                    doc.text(text, 20, y);
-                    y += 10;
-                }
-            });
-            doc.save("SoftwareReport.pdf");
-        });
-    </script>
-}
