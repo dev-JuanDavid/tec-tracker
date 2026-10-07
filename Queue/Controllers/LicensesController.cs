@@ -1,156 +1,81 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
-using System.Data.Entity.Migrations;
+using System;
 using System.Linq;
 using System.Net;
-using System.Web;
 using System.Web.Mvc;
 using Queue.DAL;
 using Queue.Models;
 
 namespace Queue.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = AccessPolicy.SuperAdministrators)]
     public class LicensesController : BaseController
     {
-        private QueueContext db = new QueueContext();
-
-        // GET: Licenses
+        private readonly QueueContext db = new QueueContext();
         public ActionResult Index(Guid idempresa)
         {
-            ViewBag.idempresa = idempresa;
-            if (idempresa != null)
-            {
-                return View(db.License.Where(j => j.Agent_Empresa.IdCompany == idempresa).OrderBy(o => o.enddate).ToList());
-            }
-
-            return RedirectToAction("Index", "Home");
+            var company = db.Agent_Empresa.Find(idempresa);
+            if (company == null) return HttpNotFound();
+            ViewBag.idempresa = company.IdCompany;
+            ViewBag.CompanyName = company.Nombre;
+            return View(db.License.Where(l => l.Agent_Empresa.IdCompany == idempresa).OrderByDescending(l => l.enddate).ToList());
         }
-
-        // GET: Licenses/Details/5
-        public ActionResult Details(Guid? id)
+        public ActionResult Details(Guid? id) { return FindView(id); }
+        public ActionResult Delete(Guid? id) { return FindView(id); }
+        public ActionResult Edit(Guid? id) { return FindView(id); }
+        private ActionResult FindView(Guid? id)
         {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            License license = db.License.Find(id);
-            if (license == null)
-            {
-                return HttpNotFound();
-            }
-            return View(license);
+            if (!id.HasValue) return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            var record = db.License.Find(id.Value);
+            if (record == null) return HttpNotFound();
+            record.idempresa = record.Agent_Empresa.IdCompany;
+            return View(record);
         }
-
-        // GET: Licenses/Create
         public ActionResult Create(Guid idempresa)
         {
-            License lc = new License();
-            lc.idempresa = idempresa;
-
-            ViewBag.idempresa = idempresa;
-            return View(lc);
+            var company = db.Agent_Empresa.Find(idempresa);
+            if (company == null) return HttpNotFound();
+            return View(new License { idempresa = idempresa, Agent_Empresa = company, enddate = DateTime.Today.AddDays(30) });
         }
-
-        // POST: Licenses/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for 
-        // more details see https://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(License license)
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Create(License record)
         {
-            if (ModelState.IsValid)
-            {
-                license.IdLicense = Guid.NewGuid();
-                license.Agent_Empresa = db.Agent_Empresa.Where(g => g.IdCompany == license.idempresa).SingleOrDefault();
-                db.License.Add(license);
-                db.SaveChanges();
-                return RedirectToAction("Index", new { idempresa = license.idempresa });
-            }
-
-            return View(license);
+            record.Agent_Empresa = db.Agent_Empresa.Find(record.idempresa);
+            if (record.Agent_Empresa == null) return HttpNotFound();
+            ValidateDate(record);
+            if (!ModelState.IsValid) return View(record);
+            record.IdLicense = Guid.NewGuid();
+            record.enddate = record.enddate.Date;
+            db.License.Add(record);
+            db.SaveChanges();
+            return RedirectToAction("Index", new { idempresa = record.idempresa });
         }
-
-        // GET: Licenses/Edit/5
-        public ActionResult Edit(Guid? id)
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Edit(License record)
         {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            License license = db.License.Find(id);
-            if (license == null)
-            {
-                return HttpNotFound();
-            }
-            ViewBag.endate = license.enddate;
-            return View(license);
+            var existing = db.License.Find(record.IdLicense);
+            if (existing == null) return HttpNotFound();
+            record.Agent_Empresa = existing.Agent_Empresa;
+            record.idempresa = existing.Agent_Empresa.IdCompany;
+            ValidateDate(record);
+            if (!ModelState.IsValid) return View(record);
+            existing.enddate = record.enddate.Date;
+            db.SaveChanges();
+            return RedirectToAction("Index", new { idempresa = record.idempresa });
         }
-
-        // POST: Licenses/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to, for 
-        // more details see https://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(License license)
+        private void ValidateDate(License record)
         {
-            if (ModelState.IsValid)
-            {
-                var newLicense = new License();
-                newLicense.IdLicense = license.IdLicense;
-                newLicense.Agent_Empresa = db.License.Find(license.IdLicense).Agent_Empresa;
-                newLicense.enddate = license.enddate;
-                newLicense.idempresa = newLicense.Agent_Empresa.IdCompany;
-
-              //  db.License.Remove(license);
-
-                db.License.AddOrUpdate(newLicense);
-
-
-
-                db.SaveChanges();
-                
-                
-                return RedirectToAction("Index", new { idempresa = newLicense.idempresa});
-            }
-            return View(license);
+            if (record.enddate.Year < 1900) ModelState.AddModelError("enddate", "Selecciona una fecha válida de vencimiento.");
         }
-
-        // GET: Licenses/Delete/5
-        public ActionResult Delete(Guid? id)
-        {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            License license = db.License.Find(id);
-            if (license == null)
-            {
-                return HttpNotFound();
-            }
-            return View(license);
-        }
-
-        // POST: Licenses/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
         public ActionResult DeleteConfirmed(Guid id)
         {
-            License license = db.License.Find(id);
-            db.License.Remove(license);
+            var record = db.License.Find(id);
+            if (record == null) return HttpNotFound();
+            var company = record.Agent_Empresa.IdCompany;
+            db.License.Remove(record);
             db.SaveChanges();
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { idempresa = company });
         }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        protected override void Dispose(bool disposing) { if (disposing) db.Dispose(); base.Dispose(disposing); }
     }
 }

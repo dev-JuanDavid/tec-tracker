@@ -1,41 +1,26 @@
-﻿@model Queue.Models.License
-
+@model Queue.Models.License
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Delete";
+    ViewBag.Title = "Eliminar licencia";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var company = Model.Agent_Empresa.IdCompany;
+    var detail = new DetailComponent {
+        Title = ViewBag.Title, Description = "Consulta la licencia asociada a esta empresa.",
+        Fields = new System.Collections.Generic.List<DetailField> {
+            new DetailField { Label = "Empresa", Value = Model.Agent_Empresa.Nombre },
+            new DetailField { Label = "Fecha de vencimiento", Value = Model.enddate.ToString("dd/MM/yyyy") },
+            new DetailField { Label = "Estado", Value = Model.enddate >= DateTime.Today ? "Vigente" : "Vencida" }
+        },
+        Actions = new System.Collections.Generic.List<TableCell> { TableCell.Link("Volver a licencias", Url.Action("Index", new { idempresa = company })) }
+    };
+    var form = new FormComponent {
+        Id = "delete-license", Title = "Confirmar eliminación", Description = "Al eliminarla, la empresa necesitará otra licencia vigente para permitir el acceso.",
+        ActionUrl = Url.Action("Delete", new { id = Model.IdLicense }), CancelUrl = Url.Action("Index", new { idempresa = company }), SubmitLabel = "Eliminar licencia", SingleColumn = true,
+        Inputs = new System.Collections.Generic.List<IFormInput> { new HiddenInput { Name = "id", Value = Model.IdLicense } }
+    };
 }
-
-<h2>Delete</h2>
-
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>License</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.startdate)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.startdate)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.enddate)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.enddate)
-        </dd>
-
-    </dl>
-
-    @using (Html.BeginForm()) {
-        @Html.AntiForgeryToken()
-
-        <div class="form-actions no-color">
-            <input type="submit" value="Delete" class="btn btn-default" /> |
-            @Html.ActionLink("Back to List", "Index")
-        </div>
-    }
+<div class="space-y-6">
+    @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 </div>

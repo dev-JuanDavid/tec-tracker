@@ -7,21 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
-    <main class="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-8 sm:px-8">
-        <div class="grid w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-xl shadow-slate-200/50 lg:min-h-[680px] lg:grid-cols-2">
-            <aside class="relative hidden overflow-hidden bg-[#6d5fb9] p-12 text-white lg:flex lg:flex-col lg:justify-between">
-                <div class="relative z-10 h-20" aria-hidden="true"></div>
-                <div class="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full border border-white/15" aria-hidden="true"></div>
-                <div class="pointer-events-none absolute -bottom-40 -left-32 h-[480px] w-[480px] rounded-full bg-white/5" aria-hidden="true"></div>
-                <div class="relative z-10">
-                    <p class="text-xs font-medium uppercase tracking-[0.2em] text-white/70">Tu equipo, conectado</p>
-                    <h2 class="mt-5 max-w-sm text-4xl font-semibold leading-tight tracking-tight">Una visión clara de cada jornada.</h2>
-                    <p class="mt-5 max-w-sm text-sm leading-7 text-white/75">Consulta la actividad de tu equipo y administra tu empresa desde un solo lugar.</p>
-                    <div class="mt-8 h-1 w-12 rounded-full bg-white/50" aria-hidden="true"></div>
-                </div>
-                <p class="relative z-10 mt-16 text-xs text-white/60">Gestión de equipos y actividad</p>
+    <main class="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-3 py-4 sm:px-8 sm:py-8">
+        <div class="grid w-full overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-xl shadow-slate-200/50 lg:min-h-[620px] lg:grid-cols-2">
+            <aside class="relative flex min-w-0 items-center justify-center overflow-hidden border-b border-slate-100 bg-[#f7f5ff] px-6 py-5 sm:py-7 lg:border-b-0 lg:border-r lg:px-10 lg:py-12" aria-label="TEC Tracker">
+                <div class="pointer-events-none absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[#6d5fb9]/5 lg:h-96 lg:w-96" aria-hidden="true"></div>
+                <div class="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full border border-[#6d5fb9]/10" aria-hidden="true"></div>
+                <img src="@Url.Content("~/Content/branding/tec-tracker-logo.png")" alt="TEC Tracker" width="1536" height="1024" class="relative z-10 block h-auto w-40 max-w-full sm:w-48 lg:w-full lg:max-w-[420px]" />
             </aside>
-            <section class="flex min-w-0 items-center justify-center px-6 py-10 sm:px-12 lg:py-16">
+            <section class="flex min-w-0 items-center justify-center px-5 py-7 sm:px-10 sm:py-10 lg:px-12 lg:py-14">
                 <div class="w-full max-w-md">@RenderBody()</div>
             </section>
         </div>

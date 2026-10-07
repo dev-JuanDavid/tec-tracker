@@ -1,0 +1,28 @@
+@model Queue.Models.Agent_Empresa
+@using Queue.Models.Components
+@{
+    var editing = Model != null && Model.IdCompany != Guid.Empty;
+    var inputs = new System.Collections.Generic.List<IFormInput> {
+        new TextInput { Name = "Nombre", Label = "Nombre de la empresa", Value = Model == null ? null : Model.Nombre, Required = true, Autocomplete = "organization", Placeholder = "Ej. Servicios Integrales S.A.S." },
+        new TextInput { Name = "Rut", Label = "Identificación tributaria", Value = Model == null ? null : Model.Rut, Required = true, Help = "NIT o RUT de la empresa." },
+        new EmailInput { Name = "Email", Label = "Correo electrónico", Value = Model == null ? null : Model.Email, Required = true, Autocomplete = "email" },
+        new TextInput { Name = "Telefono", Label = "Teléfono", Value = Model == null ? null : Model.Telefono, Required = true, Autocomplete = "tel" },
+        new TextInput { Name = "Direccion", Label = "Dirección", Value = Model == null ? null : Model.Direccion, Required = true, Autocomplete = "street-address" },
+        new TextInput { Name = "Key", Label = "Clave de la empresa", Value = Model == null ? null : Model.Key, Required = true, Autocomplete = "off", Help = "Identificador de configuración utilizado por el sistema." }
+    };
+    if (editing) {
+        inputs.Add(new HiddenInput { Name = "IdCompany", Value = Model.IdCompany });
+        inputs.Add(new SelectInput {
+            Name = "string_status", Label = "Estado", Value = Model.status ? "Active" : "Inactive", EmptyLabel = null,
+            Options = new[] { new SelectListItem { Value = "Active", Text = "Activa" }, new SelectListItem { Value = "Inactive", Text = "Inactiva" } },
+            Help = "La vigencia de la licencia se administra por separado en Licencias."
+        });
+    }
+    var form = new FormComponent {
+        Id = "company-form", Title = editing ? "Editar empresa" : "Nueva empresa",
+        Description = editing ? "Actualiza los datos de contacto y el estado de la empresa." : "Registra los datos de la empresa. El sistema creará su configuración inicial y una cuenta administradora.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Agent_Empresa"), CancelUrl = Url.Action("Index", "Agent_Empresa"),
+        SubmitLabel = editing ? "Guardar cambios" : "Crear empresa", Inputs = inputs
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))

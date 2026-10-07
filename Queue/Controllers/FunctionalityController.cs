@@ -12,6 +12,7 @@ using Queue.Models;
 
 namespace Queue.Controllers
 {
+    [Authorize(Roles = AccessPolicy.SuperAdministrators)]
     public class FunctionalityController : BaseController
     {
         private QueueContext db = new QueueContext();
@@ -37,12 +38,15 @@ namespace Queue.Controllers
         // GET: Functionalities
         public ActionResult Index(Guid idCompany)
         {
+            var company = db.Agent_Empresa.Find(idCompany);
+            if (company == null) return HttpNotFound();
+            ViewBag.CompanyName = company.Nombre;
 
             var querytableCompanyFunctionalities = db.CompanyFunctionality.AsQueryable();
 
             //lista funcionalidades de una determinada empresa 
             var functionalities = (from f in querytableCompanyFunctionalities
-                                   where f.IdCompany.CompareTo(idCompany) == 0
+                                   where f.IdCompany == idCompany
                                    select f.Functionality).ToList();
 
             ViewBag.IdCompany = idCompany;
@@ -51,7 +55,7 @@ namespace Queue.Controllers
         }
 
         // GET: Functionalities/Details/5
-        public ActionResult Details(int? id)
+        public ActionResult Details(Guid? id, Guid? idCompany)
         {
             if (id == null)
             {
@@ -62,6 +66,7 @@ namespace Queue.Controllers
             {
                 return HttpNotFound();
             }
+            functionality.IdCompany = idCompany ?? Guid.Empty;
             return View(functionality);
         }
 
@@ -72,7 +77,9 @@ namespace Queue.Controllers
 
             ViewBag.IdCompany = idCompany;
 
-            return View();
+            var company = db.Agent_Empresa.Find(idCompany);
+            if (company == null) return HttpNotFound();
+            return View(new Functionality { IdCompany = idCompany });
         }
 
        
@@ -85,6 +92,10 @@ namespace Queue.Controllers
         public ActionResult Create( Functionality functionality)
         {
             PopulateLitItemSelect();
+            ViewBag.IdCompany = functionality.IdCompany;
+            if (db.Agent_Empresa.Find(functionality.IdCompany) == null) return HttpNotFound();
+            if (!db.Functionality.Any(f => f.IdFunctionality == functionality.IdFunctionality && f.Active))
+                ModelState.AddModelError("IdFunctionality", "Selecciona una funcionalidad activa del catálogo.");
 
             if (ModelState.IsValid)
             {
@@ -94,7 +105,7 @@ namespace Queue.Controllers
                 
                 //funcionalidades que tiene la empresa con id = IdEmpresa
                 var functionalities = (from f in querytableCompanyFunctionalities
-                                       where f.IdCompany.CompareTo(idCompany) == 0
+                                       where f.IdCompany == idCompany
                                        select f.Functionality).ToList();
 
                 // busco que el id de la funcionalidad escogido el el dropdown no se encuentre entre las funcionalidades
@@ -111,12 +122,12 @@ namespace Queue.Controllers
 
                     });
                     db.SaveChanges();
-                    Success("The functionality was added to the company");
+                    Success("La funcionalidad se agregó a la empresa");
                     return RedirectToAction("Index", new {idCompany= idCompany });
 
                 } else
                 {
-                    Error("The functionality is already in the company", "");
+                    ModelState.AddModelError("IdFunctionality", "La funcionalidad ya está asignada a la empresa.");
   
                 }
 
@@ -126,7 +137,7 @@ namespace Queue.Controllers
         }
 
         // GET: Functionalities/Edit/5
-        public ActionResult Edit(int? id)
+        public ActionResult Edit(Guid? id, Guid? idCompany)
         {
             if (id == null)
             {
@@ -137,6 +148,7 @@ namespace Queue.Controllers
             {
                 return HttpNotFound();
             }
+            functionality.IdCompany = idCompany ?? Guid.Empty;
             return View(functionality);
         }
 
@@ -145,13 +157,17 @@ namespace Queue.Controllers
         // más detalles, vea https://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "IdFunctionality,Name,Active")] Functionality functionality)
+        public ActionResult Edit([Bind(Include = "IdFunctionality,Name,Active,IdCompany")] Functionality functionality)
         {
+            var existing = db.Functionality.Find(functionality.IdFunctionality);
+            if (existing == null || db.Agent_Empresa.Find(functionality.IdCompany) == null) return HttpNotFound();
+            if (string.IsNullOrWhiteSpace(functionality.Name)) ModelState.AddModelError("Name", "Ingresa el nombre de la funcionalidad.");
             if (ModelState.IsValid)
             {
-                db.Entry(functionality).State = EntityState.Modified;
+                existing.Name = functionality.Name.Trim();
+                existing.Active = functionality.Active;
                 db.SaveChanges();
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", new { idCompany = functionality.IdCompany });
             }
             return View(functionality);
         }
@@ -159,7 +175,7 @@ namespace Queue.Controllers
         // GET: Functionalities/Delete/5
         public ActionResult Delete(Guid idCompany, Guid idFunctionality)
         {
-            if (idCompany == null || idFunctionality == null)
+            if (idCompany == Guid.Empty || idFunctionality == Guid.Empty)
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
@@ -171,6 +187,7 @@ namespace Queue.Controllers
                 return HttpNotFound();
             }
 
+            if (!db.CompanyFunctionality.Any(f => f.IdCompany == idCompany && f.IdFunctionality == idFunctionality)) return HttpNotFound();
             functionality.IdCompany = idCompany;
             
             return View(functionality);
@@ -193,7 +210,7 @@ namespace Queue.Controllers
             {
                 db.CompanyFunctionality.Remove(companyFunctionalityToRemove);
                 db.SaveChanges();
-                Success("The functionality was deleted");
+                Success("Se retiró la funcionalidad de la empresa");
                 return RedirectToAction("Index", new { idCompany = idCompany });
             }
 

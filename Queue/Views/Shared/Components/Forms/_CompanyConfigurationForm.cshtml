@@ -1,0 +1,19 @@
+@model Queue.Models.Agent_Configuration
+@using Queue.Models.Components
+@{
+    var editing = Model.Id_Configuration != Guid.Empty;
+    var form = new FormComponent {
+        Id = "company-configuration-form", Title = editing ? "Editar configuración" : "Nueva configuración",
+        Description = "Empresa: " + (Model.Agent_Empresa == null ? Convert.ToString(Model.IdCompany) : Model.Agent_Empresa.Nombre) + ". Define los intervalos de operación del agente.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Agent_Configuration"), CancelUrl = Url.Action("Details", "Agent_Empresa", new { id = Model.IdCompany }), SubmitLabel = "Guardar configuración",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "Id_Configuration", Value = Model.Id_Configuration },
+            new HiddenInput { Name = "IdCompany", Value = Model.IdCompany },
+            new NumberInput { Name = "InactivityPeriod", Label = "Período de inactividad", Value = Model.InactivityPeriod, Required = true, Min = "0", Step = "1", Help = "Tiempo de inactividad en segundos." },
+            new NumberInput { Name = "UploadFrecuency", Label = "Frecuencia de envío", Value = Model.UploadFrecuency, Required = true, Min = "0", Step = "1", Help = "Intervalo de envío de datos en segundos." },
+            new NumberInput { Name = "CaptureFrecuency", Label = "Frecuencia de capturas", Value = Model.CaptureFrecuency, Required = true, Min = "0", Step = "1", Help = "Intervalo de captura de imágenes en segundos." },
+            new NumberInput { Name = "LocationFrecuency", Label = "Frecuencia de ubicación", Value = Model.LocationFrecuency, Required = true, Min = "0", Step = "1", Help = "Intervalo de ubicación en minutos." }
+        }
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))

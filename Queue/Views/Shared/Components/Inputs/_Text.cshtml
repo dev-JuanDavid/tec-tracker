@@ -1,3 +1,3 @@
 ﻿@model Queue.Models.Components.TextInput
 @{ var attributes = Queue.Models.Components.InputAttributes.For(Html, Model); }
-@Html.TextBox(Model.Name, Model.Value, Model.Format, attributes)
+@Html.TextBox(Model.Name, Model.Value ?? "", Model.Format, attributes)

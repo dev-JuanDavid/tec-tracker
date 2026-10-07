@@ -1,47 +1,18 @@
-﻿@model Queue.Models.Functionality
-
+@model Queue.Models.Functionality
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Edit";
+    ViewBag.Title = "Editar catálogo de funcionalidades";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var form = new FormComponent {
+        Id = "edit-functionality-catalog", Title = ViewBag.Title,
+        Description = "Estos cambios afectan al catálogo compartido y a todas las empresas que tienen asignada esta funcionalidad.",
+        ActionUrl = Url.Action("Edit"), CancelUrl = Url.Action("Index", new { idCompany = Model.IdCompany }), SubmitLabel = "Guardar cambios",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "IdFunctionality", Value = Model.IdFunctionality }, new HiddenInput { Name = "IdCompany", Value = Model.IdCompany },
+            new TextInput { Name = "Name", Label = "Nombre de la funcionalidad", Value = Model.Name, Required = true },
+            new CheckboxInput { Name = "Active", Label = "Activa en el catálogo", Value = Model.Active }
+        }
+    };
 }
-
-<h2>Edit</h2>
-
-@using (Html.BeginForm())
-{
-    @Html.AntiForgeryToken()
-    
-    <div class="form-horizontal">
-        <h4>Functionality</h4>
-        <hr />
-        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
-        @Html.HiddenFor(model => model.IdFunctionality)
-
-        <div class="form-group">
-            @Html.LabelFor(model => model.Name, htmlAttributes: new { @class = "control-label col-md-2" })
-            <div class="col-md-10">
-                @Html.EditorFor(model => model.Name, new { htmlAttributes = new { @class = "form-control" } })
-                @Html.ValidationMessageFor(model => model.Name, "", new { @class = "text-danger" })
-            </div>
-        </div>
-
-        <div class="form-group">
-            @Html.LabelFor(model => model.Active, htmlAttributes: new { @class = "control-label col-md-2" })
-            <div class="col-md-10">
-                <div class="checkbox">
-                    @Html.EditorFor(model => model.Active)
-                    @Html.ValidationMessageFor(model => model.Active, "", new { @class = "text-danger" })
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <div class="col-md-offset-2 col-md-10">
-                <input type="submit" value="Save" class="btn btn-default" />
-            </div>
-        </div>
-    </div>
-}
-
-<div>
-    @Html.ActionLink("Back to List", "Index")
-</div>
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))

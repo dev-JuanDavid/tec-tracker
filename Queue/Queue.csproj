@@ -420,6 +420,7 @@
     <Compile Include="App_Start\Authorize.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\FilterConfig.cs" />
+    <Compile Include="App_Start\AccessPolicy.cs" />
     <Compile Include="App_Start\IdentityConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.Auth.cs" />
@@ -13609,6 +13610,7 @@
     <Content Include="Views\Account\ForgotPassword.cshtml" />
     <Content Include="Views\Account\ForgotPasswordConfirmation.cshtml" />
     <Content Include="Views\Account\Login.cshtml" />
+    <Content Include="Content\branding\tec-tracker-logo.png" />
     <Content Include="Views\Account\Register.cshtml" />
     <Content Include="Views\Account\ResetPassword.cshtml" />
     <Content Include="Views\Account\ResetPasswordConfirmation.cshtml" />
@@ -14609,6 +14611,9 @@
     <Content Include="Views\Employers\_ContactIndex.cshtml" />
     <Content Include="Views\Shared\_LayoutElement.cshtml" />
     <Content Include="Views\Agent_Empresa\Create.cshtml" />
+    <Content Include="Views\Shared\Components\Forms\_CompanyForm.cshtml" />
+    <Content Include="Views\Shared\Components\Forms\_CompanyConfigurationForm.cshtml" />
+    <Content Include="Views\Shared\Components\Forms\_LicenseForm.cshtml" />
     <Content Include="Views\Agent_Empresa\Delete.cshtml" />
     <Content Include="Views\Agent_Empresa\Details.cshtml" />
     <Content Include="Views\Agent_Empresa\Edit.cshtml" />

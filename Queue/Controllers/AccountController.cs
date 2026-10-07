@@ -213,15 +213,15 @@ namespace Queue.Controllers
 
         //
         // GET: /Account/Register
-        [AllowAnonymous]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Register()
         {
             Guid idcompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
 
+            var canAssignSuper = AccessPolicy.IsSuper(User);
             var roles = db.Roles
                 .OrderBy(c => c.Name)
-                .Where(c => c.Name != "SAdmin")
+                .Where(c => canAssignSuper || c.Name == "Admin" || c.Name == "Employer" || c.Name == "User")
                 .Select(c => new SelectListItem { Text = c.Name, Value = c.Id })
                 .ToList();
 
@@ -241,25 +241,35 @@ namespace Queue.Controllers
         //
         // POST: /Account/Register
         [HttpPost]
-        [Authorize(Roles = "SAdmin,Admin,Manager")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Register(RegisterViewModel model)
         {
+            var registrationRequestId = Convert.ToString(HttpContext.Items["RequestLogId"]);
+            Log.InfoFormat("UsuarioRegistro: intento recibido requestId={0}", registrationRequestId);
             Guid idcompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
+            Log.InfoFormat("UsuarioRegistro: empresa de sesión companyId={0} requestId={1}", idcompany, registrationRequestId);
+            var canAssignSuper = AccessPolicy.IsSuper(User);
             model.Password = System.Web.Security.Membership.GeneratePassword(8, 1);
-            if (string.IsNullOrWhiteSpace(model.RoleID) || !db.Roles.Any(r => r.Id == model.RoleID && r.Name != "SAdmin"))
+            if (string.IsNullOrWhiteSpace(model.RoleID) || !db.Roles.Any(r => r.Id == model.RoleID && (canAssignSuper || r.Name == "Admin" || r.Name == "Employer" || r.Name == "User")))
                 ModelState.AddModelError("RoleID", "Selecciona un rol válido.");
             if (!ModelState.IsValid)
             {
-                ViewBag.RoleID = new SelectList(db.Roles.Where(r => r.Name != "SAdmin").OrderBy(r => r.Name).ToList(), "Id", "Name", model.RoleID);
+                foreach (var field in ModelState.Where(s => s.Value.Errors.Count > 0))
+                    Log.WarnFormat("UsuarioRegistro: validación rechazada campo={0} errores={1} requestId={2}", field.Key, field.Value.Errors.Count, registrationRequestId);
+                ViewBag.RoleID = new SelectList(db.Roles.Where(r => canAssignSuper || r.Name == "Admin" || r.Name == "Employer" || r.Name == "User").OrderBy(r => r.Name).ToList(), "Id", "Name", model.RoleID);
                 return View(model);
             }
             var user = new ApplicationUser { UserName = model.Email, Email = model.Email, FirstName = model.FirstName, LastName = model.LastName };
+            Log.InfoFormat("UsuarioRegistro: inicio creación Identity requestId={0}", registrationRequestId);
             var result = await UserManager.CreateAsync(user, model.Password);
+            Log.InfoFormat("UsuarioRegistro: resultado Identity succeeded={0} requestId={1}", result.Succeeded, registrationRequestId);
             if (result.Succeeded)
             {
                 var Role = db.Roles.Where(r => r.Id == model.RoleID).SingleOrDefault();
-                await UserManager.AddToRoleAsync(user.Id, Role.Name);
+                Log.InfoFormat("UsuarioRegistro: asignar rol roleId={0} userId={1} requestId={2}", Role.Id, user.Id, registrationRequestId);
+                var assignedRole = await UserManager.AddToRoleAsync(user.Id, Role.Name);
+                if (!assignedRole.Succeeded) Log.ErrorFormat("UsuarioRegistro: asignación de rol falló errores={0} requestId={1}", string.Join("; ", assignedRole.Errors), registrationRequestId);
 
                 var oUser = db.Users.Find(user.Id);
                 oUser.EmailConfirmed = true;
@@ -275,21 +285,26 @@ namespace Queue.Controllers
                 auc.idUser = Guid.Parse(oUser.Id);
                 db.Agent_UserCompany.Add(auc);
 
+                Log.InfoFormat("UsuarioRegistro: guardar relación usuario-empresa companyId={0} userId={1} requestId={2}", idcompany, oUser.Id, registrationRequestId);
                 await db.SaveChangesAsync();
+                Log.InfoFormat("UsuarioRegistro: relación guardada requestId={0}", registrationRequestId);
 
                 try
                 {
                     EmailController ec = new EmailController();
                     List<string> _mails = new List<string>();
                     _mails.Add(model.Email);
+                    Log.InfoFormat("UsuarioRegistro: inicio invitación por correo requestId={0}", registrationRequestId);
                     await ec.SendInvitation(_mails, model.Email, model.Password);
                 }
                 catch (Exception ex)
                 {
+                    Log.Error("UsuarioRegistro: fallo invitación por correo requestId=" + registrationRequestId, ex);
                     Warning("Error enviado correo: " + ex.Message, "");
                 }
 
 
+                Log.InfoFormat("UsuarioRegistro: registro completado companyId={0} userId={1} requestId={2}", idcompany, user.Id, registrationRequestId);
                 Success("Usuario creado");
                 //await SignInManager.SignInAsync(user, isPersistent:false, rememberBrowser:false);
 
@@ -303,13 +318,14 @@ namespace Queue.Controllers
             }
             else
             {
+                Log.WarnFormat("UsuarioRegistro: Identity rechazó registro errores={0} requestId={1}", string.Join("; ", result.Errors), registrationRequestId);
                 List<string> errors = result.Errors.ToList();
 
                 Warning(errors[0].ToString(), "");
             }
 
             List<SelectListItem> RoleID = new List<SelectListItem>();
-            var RolesNames = db.Roles.Where(c => c.Name != "SAdmin").OrderBy(c => c.Name).ToList();
+            var RolesNames = db.Roles.Where(c => canAssignSuper || c.Name == "Admin" || c.Name == "Employer" || c.Name == "User").OrderBy(c => c.Name).ToList();
             foreach (var r in RolesNames)
             {
                 RoleID.Add(new SelectListItem() { Text = r.Name, Value = r.Id });
@@ -320,8 +336,10 @@ namespace Queue.Controllers
             return View(model);
         }
 
+        [NonAction]
         public async Task<String> AddAdmnistrator(RegisterViewModel model)
         {
+            var canAssignSuper = AccessPolicy.IsSuper(User);
             model.Password = System.Web.Security.Membership.GeneratePassword(8, 1);
             var user = new ApplicationUser { UserName = model.Email, Email = model.Email, FirstName = model.FirstName, LastName = model.LastName };
             var result = await UserManager.CreateAsync(user, model.Password);

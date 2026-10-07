@@ -1,37 +1,24 @@
-﻿@model Queue.Models.Functionality
-
+@model Queue.Models.Functionality
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Delete";
+    ViewBag.Title = "Funcionalidad de empresa";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var detail = new DetailComponent {
+        Title = Model.Name, Description = "Información de la funcionalidad del catálogo.",
+        Fields = new System.Collections.Generic.List<DetailField> { new DetailField { Label = "Estado", Value = Model.Active ? "Activa" : "Inactiva" } },
+        Actions = new System.Collections.Generic.List<TableCell> { TableCell.Link("Volver a funcionalidades", Url.Action("Index", new { idCompany = Model.IdCompany })) }
+    };
+    var form = new FormComponent {
+        Id = "remove-company-functionality", Title = "Retirar funcionalidad", Description = "Se retirará la asignación de esta empresa. La funcionalidad seguirá disponible en el catálogo.",
+        ActionUrl = Url.Action("Delete"), CancelUrl = Url.Action("Index", new { idCompany = Model.IdCompany }), SubmitLabel = "Retirar de la empresa", SingleColumn = true,
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "IdCompany", Value = Model.IdCompany },
+            new HiddenInput { Name = "IdFunctionality", Value = Model.IdFunctionality }
+        }
+    };
 }
-
-<h2>Delete</h2>
-
-<h3>Are you sure you want to delete this functionality?</h3>
-
-
-    <hr />
-    <dl class="dl-horizontal" style="margin-bottom: -30px;">
-
-        <dd style="
-    margin-left: 0px;
-">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-
-    </dl>
-
-    @using (Html.BeginForm()) {
-        @Html.AntiForgeryToken()
-
-<div class="form-actions no-color" style=" padding-left: 80%;">
-    <input type="submit" value="Delete" class="btn btn-info" />
-
+<div class="space-y-6">
+    @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 </div>
-        <br />
-        <div>
-            <a href="@Url.Action("Index", "Functionality", new {idCompany=Model.IdCompany})" class="btn btn-info">
-                Back to List
-            </a>
-        </div>
-    }
-

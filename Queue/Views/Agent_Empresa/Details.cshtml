@@ -1,83 +1,25 @@
 ﻿@model Queue.Models.Agent_Empresa
-
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Details";
+    ViewBag.Title = "Detalle de empresa";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var detail = new DetailComponent {
+        Title = Model.Nombre, Description = "Información de la empresa.",
+        Fields = new System.Collections.Generic.List<DetailField> {
+            new DetailField { Label = "Identificación tributaria", Value = Model.Rut },
+            new DetailField { Label = "Correo electrónico", Value = Model.Email },
+            new DetailField { Label = "Teléfono", Value = Model.Telefono },
+            new DetailField { Label = "Dirección", Value = Model.Direccion },
+            new DetailField { Label = "Estado", Value = Model.status ? "Activa" : "Inactiva" }
+        },
+        Actions = new System.Collections.Generic.List<TableCell> {
+            TableCell.Link("Volver a empresas", Url.Action("Index")),
+            TableCell.Link("Editar empresa", Url.Action("Edit", new { id = Model.IdCompany })),
+            TableCell.Link("Configurar agente", Url.Action("Create", "Agent_Configuration", new { id = Model.IdCompany })),
+            TableCell.Link("Ver funcionalidades", Url.Action("Index", "Functionality", new { IdCompany = Model.IdCompany })),
+            TableCell.Link("Ver licencias", Url.Action("Index", "Licenses", new { idempresa = Model.IdCompany }))
+        }
+    };
 }
-
-<h2>Details</h2>
-
-<div>
-    <h4>Agent_Empresa</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.Nombre)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Nombre)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Direccion)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Direccion)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Telefono)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Telefono)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Email)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Email)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Rut)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Rut)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Key)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Key)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Id_EmpresaBPM)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Id_EmpresaBPM)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.status)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.status)
-        </dd>
-
-    </dl>
-</div>
-<p>
-    @Html.ActionLink("Edit", "Edit", new { id = Model.IdCompany }) |
-    @Html.ActionLink("Back to List", "Index")
-</p>
+@Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)

@@ -11,7 +11,7 @@ namespace Queue.Models
         [Key]
         public Guid IdLicense { get; set; }
 
-        [DisplayName("Fecha Limite Licencia")]
+        [DisplayName("Fecha de vencimiento")]
         [DisplayFormat(DataFormatString = "{0:dd-MM-yyyy}", ApplyFormatInEditMode = true)]
         public DateTime enddate { get; set; }
 

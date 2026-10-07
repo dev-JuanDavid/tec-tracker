@@ -1,46 +1,20 @@
-﻿@model IEnumerable<Queue.Models.Agent_Configuration>
-
+@model IEnumerable<Queue.Models.Agent_Configuration>
+@using Queue.Models
+@using Queue.Models.Components
+@using System.Linq
 @{
-    ViewBag.Title = "Index";
+    ViewBag.Title = "Configuraciones de empresas";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var table = TableComponent.From(Model ?? Enumerable.Empty<Agent_Configuration>(),
+        new TableColumn<Agent_Configuration> { Title = "Empresa", Cell = item => TableCell.Text(item.Agent_Empresa == null ? Convert.ToString(item.IdCompany) : item.Agent_Empresa.Nombre) },
+        new TableColumn<Agent_Configuration> { Title = "Inactividad (segundos)", Cell = item => TableCell.Text(item.InactivityPeriod) },
+        new TableColumn<Agent_Configuration> { Title = "Envío (segundos)", Cell = item => TableCell.Text(item.UploadFrecuency) },
+        new TableColumn<Agent_Configuration> { Title = "Capturas (segundos)", Cell = item => TableCell.Text(item.CaptureFrecuency) },
+        new TableColumn<Agent_Configuration> { Title = "Ubicación (minutos)", Cell = item => TableCell.Text(item.LocationFrecuency) },
+        new TableColumn<Agent_Configuration> { Title = "Editar", Cell = item => TableCell.Link("Editar", Url.Action("Edit", new { id = item.Id_Configuration })) });
+    table.Title = ViewBag.Title; table.Description = "Consulta los intervalos configurados para los agentes.";
+    table.Actions.Add(TableCell.Link("Volver a empresas", Url.Action("Index", "Agent_Empresa")));
+    table.EmptyMessage = "No hay configuraciones registradas.";
 }
-
-<h2>Index</h2>
-
-<p>
-    @Html.ActionLink("Create New", "Create")
-</p>
-<table class="table">
-    <tr>
-        <th>
-            @Html.DisplayNameFor(model => model.InactivityTime)
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.InactivityPeriod)
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.CaptureFrecuency)
-        </th>
-        <th></th>
-    </tr>
-
-@foreach (var item in Model) {
-    <tr>
-        <td>
-            @Html.DisplayFor(modelItem => item.InactivityTime)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.InactivityPeriod)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.CaptureFrecuency)
-        </td>
-        <td>
-            @Html.ActionLink("Edit", "Edit", new { id=item.Id_Configuration }) |
-            @Html.ActionLink("Details", "Details", new { id=item.Id_Configuration }) |
-            @Html.ActionLink("Delete", "Delete", new { id=item.Id_Configuration })
-        </td>
-    </tr>
-}
-
-</table>
+@Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)

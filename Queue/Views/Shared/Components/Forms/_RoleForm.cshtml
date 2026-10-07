@@ -5,7 +5,9 @@
     var inputs = new System.Collections.Generic.List<IFormInput> {
         new TextInput { Name = "Name", Label = "Nombre del rol", Value = Model == null ? null : Model.Name, Required = true, Help = "Los nombres de los roles existentes pueden estar vinculados a los permisos del sistema." }
     };
-    if (editing) inputs.Add(new HiddenInput { Name = "Id", Value = Model.Id });
+    if (editing) {
+        inputs.Add(new HiddenInput { Name = "Id", Value = Model.Id });
+    }
     var form = new FormComponent {
         Id = "role-form", Title = editing ? "Editar rol" : "Nuevo rol", Description = "Administra los roles disponibles en el sistema.",
         ActionUrl = Url.Action(editing ? "Edit" : "Create", "Role"), CancelUrl = Url.Action("Index", "Role"),

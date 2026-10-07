@@ -1,34 +1,17 @@
-﻿@model Queue.Models.Functionality
-
+@model Queue.Models.Functionality
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Details";
+    ViewBag.Title = "Funcionalidad de empresa";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var detail = new DetailComponent {
+        Title = Model.Name, Description = "Información de la funcionalidad del catálogo.",
+        Fields = new System.Collections.Generic.List<DetailField> { new DetailField { Label = "Estado", Value = Model.Active ? "Activa" : "Inactiva" } },
+        Actions = new System.Collections.Generic.List<TableCell> { TableCell.Link("Volver a funcionalidades", Url.Action("Index", new { idCompany = Model.IdCompany })) }
+    };
+
 }
-
-<h2>Details</h2>
-
-<div>
-    <h4>Functionality</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Active)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Active)
-        </dd>
-
-    </dl>
+<div class="space-y-6">
+    @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)
+    
 </div>
-<p>
-    @Html.ActionLink("Edit", "Edit", new { id = Model.IdFunctionality }) |
-    @Html.ActionLink("Back to List", "Index")
-</p>

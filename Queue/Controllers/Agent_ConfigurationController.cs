@@ -1,111 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Entity;
+using System;
 using System.Linq;
 using System.Net;
-using System.Web;
 using System.Web.Mvc;
 using Queue.DAL;
 using Queue.Models;
 
 namespace Queue.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = AccessPolicy.SuperAdministrators)]
     public class Agent_ConfigurationController : Controller
     {
-        private QueueContext db = new QueueContext();
-
-        // GET: Agent_Configuration
-        public ActionResult Index()
+        private readonly QueueContext db = new QueueContext();
+        public ActionResult Index(Guid? idCompany)
         {
-            return View(db.Agent_Configuration.ToList());
+            ViewBag.IdCompany = idCompany;
+            var records = db.Agent_Configuration.AsQueryable();
+            if (idCompany.HasValue) records = records.Where(c => c.IdCompany == idCompany);
+            return View(records.ToList());
         }
-
-        // GET: Agent_Configuration/Details/5
         public ActionResult Details(Guid? id)
         {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            Agent_Configuration agent_Configuration = db.Agent_Configuration.Find(id);
-            if (agent_Configuration == null)
-            {
-                return HttpNotFound();
-            }
-            return View(agent_Configuration);
+            if (!id.HasValue) return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            var record = db.Agent_Configuration.Find(id.Value);
+            if (record == null) return HttpNotFound();
+            return View(record);
         }
-
-        // GET: Agent_Configuration/Create
         public ActionResult Create(Guid id)
         {
-            Agent_Configuration ac = db.Agent_Configuration.Where(d => d.IdCompany == id).SingleOrDefault();
-
-            if (ac != null)
-                return RedirectToAction("Edit", new { id = ac.Id_Configuration });
-            else
-            {
-                ac = new Agent_Configuration();
-                ac.IdCompany = id;
-                ViewBag.IdCompany = id;
-            }
-
-            return View(ac);
+            var company = db.Agent_Empresa.Find(id);
+            if (company == null) return HttpNotFound();
+            var record = db.Agent_Configuration.FirstOrDefault(c => c.IdCompany == id);
+            if (record != null) return RedirectToAction("Edit", new { id = record.Id_Configuration });
+            return View(new Agent_Configuration { IdCompany = id, Agent_Empresa = company, DateCreation = DateTime.Now });
         }
-
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(Agent_Configuration ac)
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Create(Agent_Configuration record)
         {
-            if (ModelState.IsValid)
-            {
-                ac.Id_Configuration = Guid.NewGuid();
-                ac.Agent_Empresa = db.Agent_Empresa.Where(a => a.IdCompany == ac.IdCompany).SingleOrDefault();
-
-                db.Agent_Configuration.Add(ac);
-                db.SaveChanges();
-                return RedirectToAction("Edit", new { id = ac.Id_Configuration });
-            }
-
-            return View(ac);
+            record.Agent_Empresa = record.IdCompany.HasValue ? db.Agent_Empresa.Find(record.IdCompany.Value) : null;
+            if (record.Agent_Empresa == null) return HttpNotFound();
+            if (db.Agent_Configuration.Any(c => c.IdCompany == record.IdCompany))
+                ModelState.AddModelError("", "La empresa ya tiene una configuración. Regresa a empresas para editarla.");
+            if (!ModelState.IsValid) return View(record);
+            record.Id_Configuration = Guid.NewGuid();
+            record.DateCreation = DateTime.Now;
+            db.Agent_Configuration.Add(record);
+            db.SaveChanges();
+            return RedirectToAction("Details", "Agent_Empresa", new { id = record.IdCompany });
         }
-
         public ActionResult Edit(Guid? id)
         {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            Agent_Configuration agent_Configuration = db.Agent_Configuration.Find(id);
-            if (agent_Configuration == null)
-            {
-                return HttpNotFound();
-            }
-            return View(agent_Configuration);
+            if (!id.HasValue) return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            var record = db.Agent_Configuration.Find(id.Value);
+            if (record == null) return HttpNotFound();
+            return View(record);
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(Agent_Configuration ac)
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Edit(Agent_Configuration record)
         {
-            if (ModelState.IsValid)
-            {
-                db.Entry(ac).State = EntityState.Modified;
-                db.SaveChanges();
-                return RedirectToAction("Index", "Agent_Empresa", new { id = ac.IdCompany });
-            }
-            return View(ac);
+            var existing = db.Agent_Configuration.Find(record.Id_Configuration);
+            if (existing == null) return HttpNotFound();
+            record.IdCompany = existing.IdCompany;
+            record.Agent_Empresa = existing.Agent_Empresa;
+            record.DateCreation = existing.DateCreation;
+            if (!ModelState.IsValid) return View(record);
+            existing.InactivityPeriod = record.InactivityPeriod;
+            existing.UploadFrecuency = record.UploadFrecuency;
+            existing.CaptureFrecuency = record.CaptureFrecuency;
+            existing.LocationFrecuency = record.LocationFrecuency;
+            db.SaveChanges();
+            return RedirectToAction("Details", "Agent_Empresa", new { id = existing.IdCompany });
         }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                db.Dispose();
-            }
-            base.Dispose(disposing);
-        }
+        protected override void Dispose(bool disposing) { if (disposing) db.Dispose(); base.Dispose(disposing); }
     }
 }

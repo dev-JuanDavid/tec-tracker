@@ -1,0 +1,17 @@
+@model Queue.Models.License
+@using Queue.Models.Components
+@{
+    var editing = Model.IdLicense != Guid.Empty;
+    var company = Model.Agent_Empresa == null ? Model.idempresa : Model.Agent_Empresa.IdCompany;
+    var form = new FormComponent {
+        Id = "company-license-form", Title = editing ? "Editar licencia" : "Nueva licencia", SingleColumn = true,
+        Description = "Empresa: " + (Model.Agent_Empresa == null ? company.ToString() : Model.Agent_Empresa.Nombre) + ". Una licencia es vigente hasta su fecha de vencimiento, inclusive.",
+        ActionUrl = Url.Action(editing ? "Edit" : "Create", "Licenses"), CancelUrl = Url.Action("Index", "Licenses", new { idempresa = company }), SubmitLabel = "Guardar licencia",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new HiddenInput { Name = "IdLicense", Value = Model.IdLicense },
+            new HiddenInput { Name = "idempresa", Value = company },
+            new DateInput { Name = "enddate", Label = "Fecha de vencimiento", Value = Model.enddate, Required = true, Help = "Selecciona hasta qué fecha tendrá vigencia esta licencia." }
+        }
+    };
+}
+@Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))

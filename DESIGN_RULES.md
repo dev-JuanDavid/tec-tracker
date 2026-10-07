@@ -21,3 +21,22 @@ Estas reglas se aplican al actualizar cualquier vista.
 Inputs, formularios, tablas, tarjetas de métricas (_Metric) y paneles de gráficas (_Chart).
 Ver Queue/Views/Shared/Components/README.md para los contratos.
 
+
+## Acceso según roles
+
+La navegación usa `AccessPolicy` y las rutas MVC usan `WorkspaceAccessFilter`.
+
+| Rol | Acceso |
+| --- | --- |
+| SAdmin / SuperAdmin | Administración, empresas, roles, licencias, panel e informes |
+| Admin | Administración de usuarios, empleados, cargos, grupos, clasificación y parámetros; panel e informes |
+| Employer | Panel e informes de actividades, sumado, software y hardware |
+| User | Mi cuenta y contraseña |
+
+- SAdmin y SuperAdmin son equivalentes para permisos; los nombres de los roles existentes no se cambian.
+- Los permisos de varios roles se acumulan.
+- Los informes actuales contienen datos de empresa. User no tiene acceso a ellos hasta implementar consultas personales con una asociación explícita entre cuenta y empleado.
+- Ocultar un enlace no reemplaza la autorización del servidor.
+- Admin no asigna roles de superadministrador ni edita esas cuentas. La edición de usuarios valida la pertenencia a la empresa de sesión.
+- El filtro MVC no modifica la autenticación de los agentes en Web API.
+- Nuevas rutas MVC deben clasificarse en la política antes de habilitarlas para Employer o User.

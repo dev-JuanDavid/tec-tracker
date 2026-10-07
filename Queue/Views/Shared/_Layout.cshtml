@@ -1,5 +1,7 @@
 ﻿@{
     Layout = null;
+    var canAdminister = Queue.AccessPolicy.CanAdminister(User);
+    var canReport = Queue.AccessPolicy.CanReport(User);
     var username = (Session["Name"] != null && !string.IsNullOrEmpty(Session["Name"].ToString())) ? Session["Name"].ToString() : "Usuario";
     var useremail = (Session["Email"] != null) ? Session["Email"].ToString() : "";
     var pageTitle = Convert.ToString(ViewBag.NavTitle);
@@ -29,6 +31,8 @@
         :root { --sidebar-brand: #6d5fb9; }
         #sidebar { width: 280px; flex-shrink: 0; background: var(--sidebar-brand); color: #fff; box-shadow: 8px 0 32px rgba(42, 31, 82, .1); transition: width .22s ease, transform .22s ease; z-index: 45; }
         #sidebar .sidebar-brand { height: 104px; padding: 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,.15); }
+        #sidebar .brand-logo { display: flex; align-items: center; justify-content: center; width: 208px; height: 76px; padding: 2px 10px; border-radius: 14px; background: #fff; flex-shrink: 0; }
+        #sidebar .brand-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
         #sidebar .brand-mark { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25); border-radius: 13px; font-size: 23px; }
         #sidebar .brand-title { font-size: 17px; font-weight: 700; letter-spacing: -.4px; }
         #sidebar .brand-caption { font-size: 11px; color: #eeebff; margin-top: 3px; }
@@ -94,7 +98,8 @@
         @@media (min-width: 1024px) {
             .sidebar-compact #sidebar { width: 80px; }
             .sidebar-compact #sidebar .sidebar-label, .sidebar-compact #sidebar .sidebar-section, .sidebar-compact #sidebar .menu-chevron { display: none; }
-            .sidebar-compact #sidebar .sidebar-brand { padding: 20px; }
+            .sidebar-compact #sidebar .sidebar-brand { padding: 12px; }
+            .sidebar-compact #sidebar .brand-logo { width: 56px; height: 48px; padding: 2px; border-radius: 10px; }
             .sidebar-compact #sidebar nav { padding-top: 22px; }
             .sidebar-compact #sidebar nav > ul { padding: 0 10px; }
             .sidebar-compact #sidebar nav > ul > li > a, .sidebar-compact #sidebar nav > ul > li > button { justify-content: center; padding: 12px; }
@@ -103,6 +108,8 @@
             .sidebar-compact #sidebar .sidebar-profile { margin: 12px 10px; padding: 10px; border: 0; background: transparent; }
         }
         @@media (max-width: 1023px) {
+            #sidebar .sidebar-brand { padding: 16px; }
+            #sidebar .brand-logo { width: 180px; flex-shrink: 1; }
             #sidebar { position: fixed; inset: 0 auto 0 0; transform: translateX(-100%); width: 280px; max-width: calc(100vw - 48px); }
             .sidebar-mobile-open #sidebar { transform: translateX(0); }
             .sidebar-mobile-open .sidebar-backdrop { display: block; }
@@ -119,11 +126,9 @@
     <aside id="sidebar" class="text-white flex flex-col" aria-label="Navegación principal">
         <!-- Logo -->
         <div class="sidebar-brand">
-            <div class="brand-mark" aria-hidden="true"><i class="mdi mdi-chart-line"></i></div>
-            <div class="sidebar-label">
-                <div class="brand-title">TEC Tracker</div>
-                <div class="brand-caption">Tu equipo, conectado.</div>
-            </div>
+            <a class="brand-logo" href="@Url.Action("Index", canReport ? "Home" : "Manage")" aria-label="TEC Tracker, inicio">
+                <img src="@Url.Content("~/Content/branding/tec-tracker-logo.png")" alt="TEC Tracker" width="1536" height="1024" />
+            </a>
             <button type="button" class="sidebar-close" onclick="closeMobileSidebar()" aria-label="Cerrar menú"><i class="mdi mdi-close text-xl"></i></button>
         </div>
 
@@ -132,14 +137,14 @@
             <div class="sidebar-section">Espacio de trabajo</div>
             <ul class="space-y-1 p-2">
                 <li>
-                    <a href="@Url.Action("Index", "Home")"
+                    <a href="@Url.Action("Index", canReport ? "Home" : "Manage")"
                        class="flex items-center p-2 rounded-md hover:bg-gray-700">
                         <i class="mdi mdi-home text-xl mr-3"></i>
-                        <span class="sidebar-label">Panel de actividad</span>
+                        <span class="sidebar-label">@(canReport ? "Panel de actividad" : "Mi cuenta")</span>
                     </a>
                 </li>
 
-                @if (User.IsInRole("Admin") || User.IsInRole("SAdmin"))
+                @if (canAdminister)
                 {
                     <li>
                         <button class="w-full flex items-center justify-between p-2 rounded-md hover:bg-gray-700"
@@ -151,17 +156,22 @@
                             <i class="mdi mdi-chevron-down transition-transform menu-chevron" id="adminMenuIcon"></i>
                         </button>
                         <ul id="adminMenu" class="hidden pl-6 space-y-1" role="menu">
+                            @if (Queue.AccessPolicy.IsSuper(User)) {
+                                <li><a href="@Url.Action("Index", "Agent_Empresa")" class="block p-2 rounded">Empresas</a></li>
+                                <li><a href="@Url.Action("Index", "Licenses", new { idempresa = Session["Company"] })" class="block p-2 rounded">Licencias</a></li>
+                            }
                             <li><a href="@Url.Action("UserList", "Manage")" class="block p-2 hover:bg-gray-700 rounded">Usuarios</a></li>
                             <li><a href="@Url.Action("Index", "Agent_Employee")" class="block p-2 hover:bg-gray-700 rounded">Empleados</a></li>
                             <li><a href="@Url.Action("Index", "Agent_Job")" class="block p-2 hover:bg-gray-700 rounded">Cargos</a></li>
                             <li><a href="@Url.Action("Index", "Agent_EmployeesGroups")" class="block p-2 hover:bg-gray-700 rounded">Grupos Usuarios</a></li>
                             <li><a href="@Url.Action("Index", "Agent_ProgramClasification")" class="block p-2 hover:bg-gray-700 rounded">Clasificación Programas</a></li>
-                            @*<li><a href="@Url.Action("ParameterSystem", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Parámetros del sistema</a></li>*@
-                            <li><a href="@Url.Action("NotificacionUsuarioReport", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Parámetros del sistema</a></li>
+                            
+                            <li><a href="@Url.Action("ParameterSystem", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Parámetros del sistema</a></li>
                         </ul>
                     </li>
                 }
 
+                @if (canReport) {
                 <li>
                     <button class="w-full flex items-center justify-between p-2 rounded-md hover:bg-gray-700"
                             onclick="toggleMenu('reportMenu')" aria-expanded="false">
@@ -178,6 +188,7 @@
                         <li><a href="@Url.Action("HardwareReport", "Operation")" class="block p-2 hover:bg-gray-700 rounded">Reporte Hardware</a></li>
                     </ul>
                 </li>
+                }
             </ul>
         </nav>
 
@@ -186,7 +197,7 @@
             <div class="profile-avatar" aria-hidden="true">@username.Substring(0, 1).ToUpperInvariant()</div>
             <div class="sidebar-label min-w-0">
                 <div class="profile-name">@username</div>
-                <div class="profile-caption">@(User.IsInRole("SAdmin") ? "Super administrador" : User.IsInRole("Admin") ? "Administrador" : "Mi espacio de trabajo")</div>
+                <div class="profile-caption">@(Queue.AccessPolicy.IsSuper(User) ? "Super administrador" : User.IsInRole("Admin") ? "Administrador" : User.IsInRole("Employer") ? "Responsable de empresa" : "Usuario")</div>
             </div>
         </div>
         @if (Request.IsAuthenticated)

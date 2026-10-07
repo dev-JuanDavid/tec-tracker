@@ -11,23 +11,27 @@ namespace Queue.Models
         
         public Guid Id_Configuration { get; set; }
         [Required]
-        [DisplayName("Inactivity Period (in seconds)")]
+        [DisplayName("Período de inactividad")]
+        [Range(0, int.MaxValue, ErrorMessage = "Ingresa un valor igual o mayor que cero.")]
         public int InactivityPeriod { get; set; } = 10;
         [Required]
-        [DisplayName("Upload Frecuency (in seconds)")]
+        [DisplayName("Frecuencia de envío")]
+        [Range(0, int.MaxValue, ErrorMessage = "Ingresa un valor igual o mayor que cero.")]
         public int UploadFrecuency { get; set; } = 10;
         [Required]
-        [DisplayName("Capture Images Frecuency (in seconds)")]
+        [DisplayName("Frecuencia de capturas")]
+        [Range(0, int.MaxValue, ErrorMessage = "Ingresa un valor igual o mayor que cero.")]
         public int CaptureFrecuency { get; set; } = 10;
         public Guid? IdCompany { get; set; }
         public virtual Agent_Empresa Agent_Empresa { get; set; }
 
         [Required]
-        [DisplayName("Capture Images Frecuency (in minutes)")]
+        [DisplayName("Frecuencia de ubicación")]
+        [Range(0, int.MaxValue, ErrorMessage = "Ingresa un valor igual o mayor que cero.")]
         public int LocationFrecuency { get; set; }
 
         [Required]
-        [DisplayName("Date Creation")]
+        [DisplayName("Fecha de creación")]
         public DateTime DateCreation { get; set; }
     }
 }

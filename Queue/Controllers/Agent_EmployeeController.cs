@@ -34,7 +34,7 @@ namespace Queue.Controllers
             cp = new ClaimsPrincipal();
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Index()
         {
             var company = Request.RequestContext.HttpContext.Session["Company"].ToString();
@@ -47,7 +47,7 @@ namespace Queue.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        [Authorize(Roles = "SAdmin,Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Create()
         {
             Guid idcompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
@@ -65,7 +65,7 @@ namespace Queue.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Create(Agent_Employee agent_Employee)
         {
             Guid idcompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
@@ -154,7 +154,7 @@ namespace Queue.Controllers
 
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult uploaduser(HttpPostedFileBase file)
         {
             List<Agent_Employee_ViewModel> notuploaded = new List<Agent_Employee_ViewModel>();
@@ -198,7 +198,7 @@ namespace Queue.Controllers
             return View(notuploaded);
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         private Boolean CreateByFile(String FilePath, ref List<Agent_Employee_ViewModel> notuploaded)
         {
             if (System.IO.File.Exists(FilePath))

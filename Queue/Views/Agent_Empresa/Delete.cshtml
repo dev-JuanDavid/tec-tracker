@@ -1,98 +1,27 @@
-﻿@model Queue.Models.Agent_Empresa
-
+@model Queue.Models.Agent_Empresa
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Delete";
+    ViewBag.Title = "Eliminar empresa";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var detail = new DetailComponent {
+        Title = "Eliminar empresa", Description = "Revisa la empresa antes de confirmar. También se eliminarán su configuración, licencias, funcionalidades y horarios asociados.",
+        Fields = new System.Collections.Generic.List<DetailField> {
+            new DetailField { Label = "Empresa", Value = Model.Nombre },
+            new DetailField { Label = "Identificación tributaria", Value = Model.Rut },
+            new DetailField { Label = "Correo electrónico", Value = Model.Email },
+            new DetailField { Label = "Teléfono", Value = Model.Telefono },
+            new DetailField { Label = "Dirección", Value = Model.Direccion },
+            new DetailField { Label = "Estado", Value = Model.status ? "Activa" : "Inactiva" }
+        }
+    };
+    var form = new FormComponent {
+        Id = "delete-company-form", Title = "Confirmar eliminación", Description = "Esta acción elimina los registros indicados y no se puede deshacer desde el aplicativo.",
+        ActionUrl = Url.Action("Delete", new { id = Model.IdCompany }), CancelUrl = Url.Action("Index"), SubmitLabel = "Eliminar empresa", SingleColumn = true,
+        Inputs = new System.Collections.Generic.List<IFormInput> { new HiddenInput { Name = "id", Value = Model.IdCompany } }
+    };
 }
-
-<h2>Delete</h2>
-
-<h3>Are you sure you want to delete this?</h3>
-<div>
-   @* <h4>Agent_Empresa</h4>*@
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.Nombre)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Nombre)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Direccion)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Direccion)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Telefono)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Telefono)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Email)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Email)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Rut)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Rut)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Key)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Key)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.Id_EmpresaBPM)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.Id_EmpresaBPM)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.status)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.status)
-        </dd>
-
-    </dl>
-
-    <br />
-    <br />
-
-    @using (Html.BeginForm())
-    {
-        @Html.AntiForgeryToken()
-        <div class=" form-inline my-10">
-            <div class="form-group mb-2 my-10">
-                <input type="submit" value="Delete" class="btn btn-info" />
-             
-            </div>
-
-            <div class="form-group mx-5 my-10">
-                <a href="@Url.Action("Index")" class="btn btn-info" role="button">Back to List</a>
-            </div>
-        </div>
-    }
+<div class="space-y-6">
+    @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
 </div>

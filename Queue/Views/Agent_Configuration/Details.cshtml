@@ -1,43 +1,21 @@
-﻿@model Queue.Models.Agent_Configuration
-
+@model Queue.Models.Agent_Configuration
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Details";
+    ViewBag.Title = "Configuración de empresa";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var detail = new DetailComponent {
+        Title = ViewBag.Title, Description = Model.Agent_Empresa == null ? "Intervalos de operación del agente." : "Empresa: " + Model.Agent_Empresa.Nombre,
+        Fields = new System.Collections.Generic.List<DetailField> {
+            new DetailField { Label = "Período de inactividad", Value = Model.InactivityPeriod + " segundos" },
+            new DetailField { Label = "Frecuencia de envío", Value = Model.UploadFrecuency + " segundos" },
+            new DetailField { Label = "Frecuencia de capturas", Value = Model.CaptureFrecuency + " segundos" },
+            new DetailField { Label = "Frecuencia de ubicación", Value = Model.LocationFrecuency + " minutos" }
+        },
+        Actions = new System.Collections.Generic.List<TableCell> {
+            TableCell.Link("Volver a empresa", Url.Action("Details", "Agent_Empresa", new { id = Model.IdCompany })),
+            TableCell.Link("Editar configuración", Url.Action("Edit", new { id = Model.Id_Configuration }))
+        }
+    };
 }
-
-<h2>Details</h2>
-
-<div>
-    <h4>Agent_Configuration</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.InactivityTime)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.InactivityTime)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.InactivityPeriod)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.InactivityPeriod)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.CaptureFrecuency)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.CaptureFrecuency)
-        </dd>
-
-    </dl>
-</div>
-<p>
-    @Html.ActionLink("Edit", "Edit", new { id = Model.Id_Configuration }) |
-    @Html.ActionLink("Back to List", "Index")
-</p>
+@Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)

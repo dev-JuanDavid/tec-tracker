@@ -9,7 +9,7 @@ using System.Web.Mvc;
 
 namespace Queue.Controllers
 {
-    [Authorize(Roles = "SAdmin,Admin")]
+    [Authorize(Roles = AccessPolicy.Administrators)]
     public class ReportTestDataController : Controller
     {
         private static readonly Guid EmployeeId = new Guid("FE78B48F-4400-4BC5-A16A-5CEA145AB7B3");

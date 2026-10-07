@@ -62,12 +62,12 @@ namespace Queue.Controllers
         public async Task<ActionResult> Index(ManageMessageId? message)
         {
             ViewBag.StatusMessage =
-                message == ManageMessageId.ChangePasswordSuccess ? "Your password has been changed."
-                : message == ManageMessageId.SetPasswordSuccess ? "Your password has been set."
-                : message == ManageMessageId.SetTwoFactorSuccess ? "Your two-factor authentication provider has been set."
-                : message == ManageMessageId.Error ? "An error has occurred."
-                : message == ManageMessageId.AddPhoneSuccess ? "Your phone number was added."
-                : message == ManageMessageId.RemovePhoneSuccess ? "Your phone number was removed."
+                message == ManageMessageId.ChangePasswordSuccess ? "Tu contraseña se ha cambiado."
+                : message == ManageMessageId.SetPasswordSuccess ? "Tu contraseña se ha establecido."
+                : message == ManageMessageId.SetTwoFactorSuccess ? "Se ha configurado la autenticación de dos factores."
+                : message == ManageMessageId.Error ? "Ocurrió un error."
+                : message == ManageMessageId.AddPhoneSuccess ? "Se agregó tu número de teléfono."
+                : message == ManageMessageId.RemovePhoneSuccess ? "Se eliminó tu número de teléfono."
                 : "";
 
             var userId = User.Identity.GetUserId();
@@ -289,7 +289,7 @@ namespace Queue.Controllers
         {
             ViewBag.StatusMessage =
                 message == ManageMessageId.RemoveLoginSuccess ? "The external login was removed."
-                : message == ManageMessageId.Error ? "An error has occurred."
+                : message == ManageMessageId.Error ? "Ocurrió un error."
                 : "";
             var user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
             if (user == null)
@@ -330,7 +330,7 @@ namespace Queue.Controllers
         }
 
         // GET: /Manage/UserList
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         [SessionAuthorize]
         public ActionResult UserList()
         {
@@ -371,14 +371,16 @@ namespace Queue.Controllers
 
         // GET: /Manage/EditUer/xxxx-xxx-xxxx-xxx-xxxx
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         [SessionAuthorize]
         public ActionResult EditUser(string id)
         {
             var user = db.Users.Find(id);
             if (user == null) return HttpNotFound();
+            if (!CanEditWorkspaceUser(user)) return new HttpStatusCodeResult(403);
+            var canAssignSuper = AccessPolicy.IsSuper(User);
             List<SelectListItem> RoleID = new List<SelectListItem>();
-            var RolesNames = db.Roles.OrderBy(c => c.Name).ToList();
+            var RolesNames = db.Roles.Where(r => canAssignSuper || r.Name == "Admin" || r.Name == "Employer" || r.Name == "User").OrderBy(c => c.Name).ToList();
             foreach (var r in RolesNames)
             {
                 RoleID.Add(new SelectListItem() { Text = r.Name, Value = r.Id });
@@ -398,7 +400,7 @@ namespace Queue.Controllers
 
         }
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         [SessionAuthorize]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> EditUser(RegisterViewModel user)
@@ -406,11 +408,13 @@ namespace Queue.Controllers
 
             var oUser = db.Users.Find(user.UserId);
             if (oUser == null) return HttpNotFound();
-            if (string.IsNullOrWhiteSpace(user.RoleID) || !db.Roles.Any(r => r.Id == user.RoleID))
+            if (!CanEditWorkspaceUser(oUser)) return new HttpStatusCodeResult(403);
+            var canAssignSuper = AccessPolicy.IsSuper(User);
+            if (string.IsNullOrWhiteSpace(user.RoleID) || !db.Roles.Any(r => r.Id == user.RoleID && (canAssignSuper || r.Name == "Admin" || r.Name == "Employer" || r.Name == "User")))
                 ModelState.AddModelError("RoleID", "Selecciona un rol válido.");
             if (!ModelState.IsValid)
             {
-                ViewBag.RoleID = new SelectList(db.Roles.OrderBy(r => r.Name).ToList(), "Id", "Name", user.RoleID);
+                ViewBag.RoleID = new SelectList(db.Roles.Where(r => canAssignSuper || r.Name == "Admin" || r.Name == "Employer" || r.Name == "User").OrderBy(r => r.Name).ToList(), "Id", "Name", user.RoleID);
                 return View(user);
             }
             oUser.FirstName = user.FirstName;
@@ -438,7 +442,7 @@ namespace Queue.Controllers
                 if (!result.Succeeded)
                 {
                     ModelState.AddModelError("Password", "No se pudo cambiar la contraseña. Comprueba que cumpla los requisitos de seguridad.");
-                    ViewBag.RoleID = new SelectList(db.Roles.OrderBy(r => r.Name).ToList(), "Id", "Name", user.RoleID);
+                    ViewBag.RoleID = new SelectList(db.Roles.Where(r => canAssignSuper || r.Name == "Admin" || r.Name == "Employer" || r.Name == "User").OrderBy(r => r.Name).ToList(), "Id", "Name", user.RoleID);
                     return View(user);
                 }
             }
@@ -446,6 +450,15 @@ namespace Queue.Controllers
             return RedirectToAction("UserList");
         }
 
+        private bool CanEditWorkspaceUser(ApplicationUser target)
+        {
+            Guid company, targetId;
+            if (!Guid.TryParse(Convert.ToString(Session["Company"]), out company) || !Guid.TryParse(target.Id, out targetId)) return false;
+            if (!db.Agent_UserCompany.Any(c => c.IdCompany == company && c.idUser == targetId)) return false;
+            if (AccessPolicy.IsSuper(User)) return true;
+            var roleIds = target.Roles.Select(r => r.RoleId).ToList();
+            return !db.Roles.Any(r => roleIds.Contains(r.Id) && (r.Name == "SAdmin" || r.Name == "SuperAdmin"));
+        }
         protected override void Dispose(bool disposing)
         {
             if (disposing && _userManager != null)

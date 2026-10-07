@@ -13,9 +13,9 @@ namespace Queue.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Key]
         public Guid IdFunctionality { get; set; }
-        [DisplayName("Functionality Name")]
+        [DisplayName("Nombre de la funcionalidad")]
         public string Name { get; set; }
-        [DisplayName("State")]
+        [DisplayName("Estado")]
         public bool  Active { get; set; }
 
         [NotMapped]

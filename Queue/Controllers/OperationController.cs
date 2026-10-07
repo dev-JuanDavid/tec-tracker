@@ -2672,7 +2672,7 @@ namespace Queue.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Alertas(Guid? Id)
         {
             AlertModuleViewModel avm = new AlertModuleViewModel();
@@ -2701,7 +2701,7 @@ namespace Queue.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Alertas(AlertModuleViewModel alert)
         {
             if (ModelState.IsValid)

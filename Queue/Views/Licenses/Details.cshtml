@@ -1,35 +1,22 @@
-﻿@model Queue.Models.License
-
+@model Queue.Models.License
+@using Queue.Models.Components
 @{
-    ViewBag.Title = "Details";
+    ViewBag.Title = "Detalle de licencia";
+    ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var company = Model.Agent_Empresa.IdCompany;
+    var detail = new DetailComponent {
+        Title = ViewBag.Title, Description = "Consulta la licencia asociada a esta empresa.",
+        Fields = new System.Collections.Generic.List<DetailField> {
+            new DetailField { Label = "Empresa", Value = Model.Agent_Empresa.Nombre },
+            new DetailField { Label = "Fecha de vencimiento", Value = Model.enddate.ToString("dd/MM/yyyy") },
+            new DetailField { Label = "Estado", Value = Model.enddate >= DateTime.Today ? "Vigente" : "Vencida" }
+        },
+        Actions = new System.Collections.Generic.List<TableCell> { TableCell.Link("Volver a licencias", Url.Action("Index", new { idempresa = company })) }
+    };
+
 }
-
-<h2>Details</h2>
-
-<div>
-    <h4>License</h4>
-    <hr />
-    <dl class="dl-horizontal">
-        <dt>
-            @Html.DisplayNameFor(model => model.startdate)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.startdate)
-        </dd>
-
-        <dt>
-            @Html.DisplayNameFor(model => model.enddate)
-        </dt>
-
-        <dd>
-            @Html.DisplayFor(model => model.enddate)
-        </dd>
-
-    </dl>
+<div class="space-y-6">
+    @Html.Partial("~/Views/Shared/Components/Details/_Details.cshtml", detail)
+    
 </div>
-<p>
-    @Html.ActionLink("Edit", "Edit", new { id = Model.IdLicense }) |
-    @Html.ActionLink("Back to List", "Index")
-</p>

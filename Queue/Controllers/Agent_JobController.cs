@@ -13,7 +13,7 @@ namespace Queue.Controllers
     {
         private QueueContext db = new QueueContext();
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Index()
         {
             var company = Request.RequestContext.HttpContext.Session["Company"].ToString();
@@ -25,7 +25,7 @@ namespace Queue.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Create()
         {
             return View();
@@ -33,7 +33,7 @@ namespace Queue.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = AccessPolicy.Administrators)]
         public ActionResult Create(Agent_Job agent_Job)
         {
             if (ModelState.IsValid)
