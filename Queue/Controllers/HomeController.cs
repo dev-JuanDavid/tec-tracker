@@ -44,12 +44,28 @@ namespace Queue.Controllers
             OperationController opc = new OperationController();
             if (dsb.DateFrom.Date > dsb.DateTo.Date)
                 ModelState.AddModelError("DateTo", "La fecha final debe ser igual o posterior a la inicial.");
+            else if ((dsb.DateTo.Date - dsb.DateFrom.Date).TotalDays > 366)
+                ModelState.AddModelError("DateTo", "El período del panel no puede superar 367 días.");
             List<BasicStatsDashboard> data = ModelState.IsValid ? opc.GetDataForDashBoard(company.ToString(), dsb.DateFrom, dsb.DateTo, dsb.ddlUsers, dsb.idgroup) : new List<BasicStatsDashboard>();
 
             //cuadritos de resumen
             dasb.resume = GetResume(data);
             //app mas usadas
-            dasb.graph = GetAppResume(data);
+            dasb.RegisteredSeconds = data.Sum(item => item.Time ?? 0);
+            dasb.ApplicationCount = data.Where(item => !string.IsNullOrWhiteSpace(item.Application))
+                .Select(item => item.Application.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+            dasb.ApplicationUsage = data
+                .Where(item => !string.IsNullOrWhiteSpace(item.Application))
+                .GroupBy(item => item.Application.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => new DashboardApplicationUsage
+                {
+                    Application = group.First().Application.Trim(),
+                    Seconds = group.Sum(item => item.Time ?? 0)
+                })
+                .OrderByDescending(item => item.Seconds)
+                .Take(10)
+                .ToList();
+            dasb.ActivityPerDay = GetActivityPerDay(data, dsb.DateFrom.Date, dsb.DateTo.Date);
             //resumen por usuario
             dasb.DataPerUser = GetTimePerUser(data);
 
@@ -112,8 +128,7 @@ namespace Queue.Controllers
 
             foreach (var k in data.GroupBy(g => g.Clasification))
             {
-                decimal total = 0;
-                total = decimal.Parse(data.Where(f => f.Clasification == k.Key).Sum(b => b.Time).ToString());
+                decimal total = Convert.ToDecimal(k.Sum(item => item.Time ?? 0));
                 switch (k.Key)
                 {
                     case 0:
@@ -142,6 +157,26 @@ namespace Queue.Controllers
                 rs.UnclasifyTime = Math.Round((rs.UnclasifyTime * 100) / totalactivity, 2);
             }
             return rs;
+        }
+
+        private static List<DashboardActivityDay> GetActivityPerDay(List<BasicStatsDashboard> data, DateTime from, DateTime to)
+        {
+            var byDate = data.GroupBy(item => item.Date_.Date).ToDictionary(group => group.Key, group => group.ToList());
+            var result = new List<DashboardActivityDay>();
+            for (var day = from.Date; day <= to.Date; day = day.AddDays(1))
+            {
+                List<BasicStatsDashboard> records;
+                if (!byDate.TryGetValue(day, out records)) records = new List<BasicStatsDashboard>();
+                result.Add(new DashboardActivityDay
+                {
+                    Date = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    UnclassifiedSeconds = records.Where(item => item.Clasification == 0).Sum(item => item.Time ?? 0),
+                    ProductiveSeconds = records.Where(item => item.Clasification == 1).Sum(item => item.Time ?? 0),
+                    ImproductiveSeconds = records.Where(item => item.Clasification == 2).Sum(item => item.Time ?? 0),
+                    NeutralSeconds = records.Where(item => item.Clasification == 3).Sum(item => item.Time ?? 0)
+                });
+            }
+            return result;
         }
         public List<GraphData> GetAppResume(List<BasicStatsDashboard> data)
         {

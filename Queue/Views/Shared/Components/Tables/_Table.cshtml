@@ -1,6 +1,6 @@
 ﻿@model Queue.Models.Components.TableComponent
 @using Queue.Models.Components
-<section data-component-table data-page-size="@Model.PageSize" data-paginate="@Model.EnablePagination.ToString().ToLowerInvariant()" class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+<section data-component-table data-page-size="@Model.PageSize" data-paginate="@Model.EnablePagination.ToString().ToLowerInvariant()" data-export-title="@Model.ExportTitle" data-export-subtitle="@Model.ExportSubtitle" data-export-context="@Model.ExportContext" class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
     <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-6">
         <div>
             <h1 class="text-xl font-semibold tracking-tight text-slate-800">@Model.Title <span class="ml-2 rounded-full bg-[#6d5fb9]/10 px-2.5 py-1 text-xs font-medium text-[#6d5fb9]">@Model.Rows.Count</span></h1>

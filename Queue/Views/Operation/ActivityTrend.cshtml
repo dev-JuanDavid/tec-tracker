@@ -1,0 +1,189 @@
+@model Queue.ViewModels.ActivityTrendViewModel
+@using Queue.Models.Components
+@using Queue.ViewModels
+@using System.Linq
+@{
+    ViewBag.Title = "Tendencia de actividad";
+    ViewBag.NavTitle = ViewBag.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var culture = System.Globalization.CultureInfo.GetCultureInfo("es-CO");
+    var groups = (ViewBag.idgruoup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>())
+        .Select(group => new SelectListItem { Value = group.Value, Text = group.Value == Guid.Empty.ToString() ? "Todos los grupos" : group.Text }).ToList();
+    var employees = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var selectedGroup = groups.Where(group => group.Value == Model.GroupId.ToString()).Select(group => group.Text).FirstOrDefault() ?? "Todos los grupos";
+    var selectedEmployee = string.IsNullOrWhiteSpace(Model.User)
+        ? "Todos los empleados"
+        : employees.Where(employee => employee.Value == Model.User).Select(employee => employee.Text).FirstOrDefault() ?? Model.User;
+    var currentTotal = Model.Current.TotalSeconds;
+    var previousTotal = Model.Previous.TotalSeconds;
+    var dayCount = Model.HasQuery && Model.To.Year > 1900 && Model.From.Year > 1900 ? (Model.To.Date - Model.From.Date).Days + 1 : 7;
+    var currentUnclassifiedPercent = currentTotal > 0 ? Model.Current.UnclassifiedSeconds * 100 / currentTotal : 0;
+    var context = "Período actual: " + Model.From.ToString("d", culture) + " – " + Model.To.ToString("d", culture) +
+        " | Comparación: " + Model.PreviousFrom.ToString("d", culture) + " – " + Model.PreviousTo.ToString("d", culture) +
+        " | Grupo: " + selectedGroup + " | Empleado: " + selectedEmployee;
+    var form = new FormComponent {
+        Id = "activity-trend-form", Title = "Comparar períodos", Description = "Elige el período actual. Se compara automáticamente con el mismo número de días inmediatamente anterior.",
+        ActionUrl = Url.Action("ActivityTrend", "Operation"), SubmitLabel = "Consultar tendencia",
+        Inputs = new System.Collections.Generic.List<IFormInput> {
+            new DateInput { Name = "From", Label = "Desde", Value = Model.From, Required = true },
+            new DateInput { Name = "To", Label = "Hasta", Value = Model.To, Required = true },
+            new SelectInput { Name = "GroupId", Label = "Grupo", Value = Model.GroupId, Options = groups, EmptyLabel = null },
+            new SelectInput { Name = "User", Label = "Empleado", Value = Model.User, Options = employees, EmptyLabel = "Todos los empleados", DependsOn = "GroupId", OptionsUrl = Url.Action("GetUserByArea", "Operation") }
+        }
+    };
+    var dailyTable = TableComponent.From(Model.Days,
+        new TableColumn<ActivityTrendDay> { Title = "Fecha actual", Cell = item => TableCell.Text(item.CurrentDate.ToString("d", culture)) },
+        new TableColumn<ActivityTrendDay> { Title = "Tiempo actual", Cell = item => TableCell.Text(FormatDuration(item.CurrentSeconds)) },
+        new TableColumn<ActivityTrendDay> { Title = "Registros actuales", Cell = item => TableCell.Text(item.CurrentHasRecords ? "Con registros" : "Sin registros") },
+        new TableColumn<ActivityTrendDay> { Title = "Fecha anterior", Cell = item => TableCell.Text(item.PreviousDate.ToString("d", culture)) },
+        new TableColumn<ActivityTrendDay> { Title = "Tiempo anterior", Cell = item => TableCell.Text(FormatDuration(item.PreviousSeconds)) },
+        new TableColumn<ActivityTrendDay> { Title = "Registros anteriores", Cell = item => TableCell.Text(item.PreviousHasRecords ? "Con registros" : "Sin registros") },
+        new TableColumn<ActivityTrendDay> { Title = "Cambio", Cell = item => TableCell.Text(FormatDelta(item.DeltaSeconds)) });
+    dailyTable.Title = "Cobertura diaria de registros";
+    dailyTable.Description = "Cada fecha se compara con el mismo día relativo del período anterior. 'Sin registros' es distinto de actividad registrada con duración cero.";
+    dailyTable.EmptyMessage = "No hay días para comparar.";
+    dailyTable.EnableExport = true;
+    dailyTable.ExportTitle = "Cobertura diaria de actividad";
+    dailyTable.ExportSubtitle = dailyTable.Description;
+    dailyTable.ExportContext = context;
+
+    var classificationTable = TableComponent.From(Model.Classifications,
+        new TableColumn<ActivityTrendClassification> { Title = "Clasificación", Cell = item => TableCell.Text(item.Name) },
+        new TableColumn<ActivityTrendClassification> { Title = "Período actual", Cell = item => TableCell.Text(FormatDuration(item.CurrentSeconds)) },
+        new TableColumn<ActivityTrendClassification> { Title = "Período anterior", Cell = item => TableCell.Text(FormatDuration(item.PreviousSeconds)) },
+        new TableColumn<ActivityTrendClassification> { Title = "Cambio", Cell = item => TableCell.Text(FormatDelta(item.DeltaSeconds)) });
+    classificationTable.Title = "Cambios por clasificación";
+    classificationTable.Description = "Comparación de los tiempos registrados en cada clasificación.";
+    classificationTable.EmptyMessage = "No hay clasificaciones para mostrar.";
+    classificationTable.EnableExport = true;
+    classificationTable.ExportTitle = "Tendencia de actividad por clasificación";
+    classificationTable.ExportSubtitle = classificationTable.Description;
+    classificationTable.ExportContext = context;
+
+    var applicationTable = TableComponent.From(Model.Applications,
+        new TableColumn<ActivityTrendApplication> { Title = "Aplicación", Cell = item => TableCell.Text(item.Application) },
+        new TableColumn<ActivityTrendApplication> { Title = "Período actual", Cell = item => TableCell.Text(FormatDuration(item.CurrentSeconds)) },
+        new TableColumn<ActivityTrendApplication> { Title = "Período anterior", Cell = item => TableCell.Text(FormatDuration(item.PreviousSeconds)) },
+        new TableColumn<ActivityTrendApplication> { Title = "Cambio", Cell = item => TableCell.Text(FormatDelta(item.DeltaSeconds)) },
+        new TableColumn<ActivityTrendApplication> { Title = "Variación", Cell = item => TableCell.Text(FormatPercentChange(item.CurrentSeconds, item.PreviousSeconds)) });
+    applicationTable.Title = "Variación por aplicación";
+    applicationTable.Description = "Todas las aplicaciones con tiempo registrado en al menos uno de los períodos.";
+    applicationTable.EmptyMessage = "No hay aplicaciones registradas en estos períodos.";
+    applicationTable.EnableExport = true;
+    applicationTable.ExportTitle = "Tendencia de actividad por aplicación";
+    applicationTable.ExportSubtitle = applicationTable.Description;
+    applicationTable.ExportContext = context;
+
+    var employeeTable = TableComponent.From(Model.Employees,
+        new TableColumn<ActivityTrendEmployee> { Title = "Empleado", Cell = item => TableCell.Text(item.User) },
+        new TableColumn<ActivityTrendEmployee> { Title = "Período actual", Cell = item => TableCell.Text(FormatDuration(item.CurrentSeconds)) },
+        new TableColumn<ActivityTrendEmployee> { Title = "Período anterior", Cell = item => TableCell.Text(FormatDuration(item.PreviousSeconds)) },
+        new TableColumn<ActivityTrendEmployee> { Title = "Cambio", Cell = item => TableCell.Text(FormatDelta(item.DeltaSeconds)) },
+        new TableColumn<ActivityTrendEmployee> { Title = "Variación", Cell = item => TableCell.Text(FormatPercentChange(item.CurrentSeconds, item.PreviousSeconds)) });
+    employeeTable.Title = "Variación por empleado";
+    employeeTable.Description = "Tiempo registrado por empleado en ambos períodos; sirve para revisar tendencias y cobertura de datos.";
+    employeeTable.EmptyMessage = "No hay actividad de empleados registrada en estos períodos.";
+    employeeTable.EnableExport = true;
+    employeeTable.ExportTitle = "Tendencia de actividad por empleado";
+    employeeTable.ExportSubtitle = employeeTable.Description;
+    employeeTable.ExportContext = context;
+
+    var chartData = Json.Encode(Model.Applications.Take(10).Select(item => new {
+        name = item.Application,
+        current = Math.Round(item.CurrentSeconds / 3600d, 3),
+        previous = Math.Round(item.PreviousSeconds / 3600d, 3)
+    })).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
+}
+<div class="space-y-6">
+    <header><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Comparación de períodos</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Tendencia de actividad</h1><p class="mt-2 text-sm text-slate-500">Compara el tiempo registrado por clasificación, aplicación y empleado.</p></header>
+    @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <p class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" role="alert">Corrige los filtros para consultar la tendencia.</p>
+    }
+    else if (!Model.HasQuery)
+    {
+        <p class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600" role="status">Selecciona un período y consulta su comparación con el intervalo anterior equivalente.</p>
+    }
+    else
+    {
+        <div class="space-y-2 text-sm text-slate-600">
+            <p><strong>Período actual:</strong> @Model.From.ToString("d", culture) – @Model.To.ToString("d", culture) <span class="mx-2 text-slate-300">|</span><strong>Anterior:</strong> @Model.PreviousFrom.ToString("d", culture) – @Model.PreviousTo.ToString("d", culture)</p>
+            <p><strong>Grupo:</strong> @selectedGroup <span class="mx-2 text-slate-300">|</span><strong>Empleado:</strong> @selectedEmployee</p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Tiempo actual", Value = FormatDuration(currentTotal), Description = "Variación: " + FormatDelta(currentTotal - previousTotal) + " (" + FormatPercentChange(currentTotal, previousTotal) + ")" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Días con registros", Value = Model.Current.DaysWithRecords.ToString("N0", culture) + " de " + dayCount.ToString("N0", culture), Description = "Período anterior: " + Model.Previous.DaysWithRecords.ToString("N0", culture) + " días con registros" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Tiempo sin clasificar", Value = currentTotal > 0 ? currentUnclassifiedPercent.ToString("0.#", culture) + " %" : "—", Description = currentTotal > 0 ? FormatDuration(Model.Current.UnclassifiedSeconds) + " del tiempo actual" : "Sin tiempo registrado para calcular el porcentaje" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Días sin registros", Value = Model.Current.DaysWithoutRecords.ToString("N0", culture), Description = "Anterior: " + Model.Previous.DaysWithoutRecords.ToString("N0", culture) + " días. No implica ausencia." })
+        </div>
+        if (Model.Current.TotalSeconds == 0 && Model.Previous.TotalSeconds == 0)
+        {
+            <p class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="status">No hay tiempo registrado en ninguno de los dos períodos. Los días sin registros no permiten concluir que hubo ausencia.</p>
+        }
+        <div class="space-y-6">
+            @if (Model.Applications.Any())
+            {
+                @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "activity-trend-chart", Title = "Aplicaciones con mayor tiempo registrado", Description = "Compara las diez aplicaciones de mayor uso entre el período actual y el anterior; la unidad es horas." })
+            }
+            @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", dailyTable)
+            @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", classificationTable)
+            @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", applicationTable)
+            @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", employeeTable)
+        </div>
+        <p class="text-xs text-slate-500">Los días sin registros se muestran como cobertura de datos; no son una medida de asistencia ni de desempeño.</p>
+    }
+</div>
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@5.3.6/dist/apexcharts.min.js"></script>
+<script>
+(function () {
+    var data = @Html.Raw(chartData);
+    var target = document.getElementById('activity-trend-chart');
+    var status = document.getElementById('activity-trend-chart_status');
+    if (!target) return;
+    if (!data.length) { target.classList.add('hidden'); status.textContent = 'No hay aplicaciones con registros para comparar.'; return; }
+    if (!window.ApexCharts) { status.textContent = 'No se pudo cargar la gráfica. Los datos siguen disponibles en las tablas.'; return; }
+    new ApexCharts(target, {
+        chart: { type: 'bar', height: Math.max(320, data.length * 42 + 90), toolbar: { show: false }, fontFamily: 'inherit' },
+        series: [
+            { name: 'Período actual', data: data.map(function (item) { return Number(item.current); }) },
+            { name: 'Período anterior', data: data.map(function (item) { return Number(item.previous); }) }
+        ],
+        colors: ['#6d5fb9', '#94a3b8'],
+        plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '60%' } },
+        dataLabels: { enabled: false },
+        xaxis: { categories: data.map(function (item) { return item.name; }), min: 0, title: { text: 'Horas registradas' }, labels: { formatter: function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' h'; } } },
+        yaxis: { labels: { maxWidth: 230, formatter: function (name) { name = String(name || ''); return name.length > 32 ? name.slice(0, 29) + '…' : name; } } },
+        grid: { borderColor: '#f1f5f9' },
+        tooltip: { y: { formatter: function (hours) { return Number(hours).toLocaleString('es-CO', { maximumFractionDigits: 2 }) + ' horas'; } } },
+        noData: { text: 'Sin datos' }
+    }).render().catch(function () { status.textContent = 'No se pudo mostrar la gráfica. Consulta las tablas disponibles.'; });
+})();
+</script>
+}
+@functions {
+    string FormatDuration(double seconds)
+    {
+        var roundedSeconds = (long)Math.Round(Math.Abs(seconds));
+        var hours = roundedSeconds / 3600;
+        var minutes = (roundedSeconds % 3600) / 60;
+        var remainingSeconds = roundedSeconds % 60;
+        if (hours > 0) return string.Format("{0} h {1} min", hours, minutes);
+        if (minutes > 0) return string.Format("{0} min {1} s", minutes, remainingSeconds);
+        return string.Format("{0} s", remainingSeconds);
+    }
+
+    string FormatDelta(double seconds)
+    {
+        if (seconds == 0) return "0 s";
+        return (seconds > 0 ? "+" : "−") + FormatDuration(seconds);
+    }
+
+    string FormatPercentChange(double current, double previous)
+    {
+        if (previous <= 0) return current > 0 ? "Nuevo" : "0 %";
+        var change = (current - previous) * 100 / previous;
+        return (change > 0 ? "+" : "") + change.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %";
+    }
+}

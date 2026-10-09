@@ -1,24 +1,138 @@
 (function () {
     'use strict';
     var exportLibraries = {};
-    function loadExportLibrary(kind) {
-        if (kind === 'excel' && window.XLSX || kind === 'pdf' && window.jspdf) return Promise.resolve();
-        if (!exportLibraries[kind]) exportLibraries[kind] = new Promise(function (resolve, reject) {
+
+    function loadScript(url) {
+        return new Promise(function (resolve, reject) {
             var script = document.createElement('script');
-            script.src = kind === 'excel' ? 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' : 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.src = url;
             script.onload = resolve;
-            script.onerror = function () { delete exportLibraries[kind]; script.remove(); reject(new Error()); };
+            script.onerror = function () { script.remove(); reject(new Error('No fue posible cargar la librería de exportación.')); };
             document.head.appendChild(script);
         });
+    }
+
+    function loadExportLibrary(kind) {
+        if (kind === 'excel' && window.XLSX) return Promise.resolve();
+        if (kind === 'pdf' && window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable) return Promise.resolve();
+        if (!exportLibraries[kind]) {
+            exportLibraries[kind] = (async function () {
+                if (kind === 'excel') {
+                    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+                    if (!window.XLSX) throw new Error('La librería de Excel no quedó disponible.');
+                    return;
+                }
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js');
+                if (!window.jspdf || !window.jspdf.jsPDF || !window.jspdf.jsPDF.API.autoTable) {
+                    throw new Error('La librería para crear tablas PDF no quedó disponible.');
+                }
+            })().catch(function (error) {
+                delete exportLibraries[kind];
+                throw error;
+            });
+        }
         return exportLibraries[kind];
     }
+
     function normalized(value) {
         return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
     }
+
+    function localDateStamp() {
+        var date = new Date();
+        return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+    }
+
+    function fileName(title, extension) {
+        var safeTitle = normalized(title).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'reporte';
+        return safeTitle + '-' + localDateStamp() + '.' + extension;
+    }
+
+    function exportExcel(title, description, context, headers, data, count) {
+        var XLSX = window.XLSX;
+        var generated = new Date().toLocaleString('es-CO');
+        var rows = [[title], [description || 'Reporte TEC Tracker']];
+        if (context) rows.push([context]);
+        rows.push(['Generado: ' + generated + ' | Registros exportados: ' + count], [], headers);
+        var headerRow = rows.length - 1;
+        rows = rows.concat(data);
+        var sheet = XLSX.utils.aoa_to_sheet(rows);
+        var lastColumn = headers.length - 1;
+        sheet['!merges'] = rows.slice(0, headerRow).map(function (_, row) {
+            return { s: { r: row, c: 0 }, e: { r: row, c: lastColumn } };
+        });
+        sheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: headerRow, c: 0 }, e: { r: data.length + headerRow, c: lastColumn } }) };
+        sheet['!rows'] = rows.map(function (_, row) {
+            if (row === 0) return { hpt: 26 };
+            if (row === 1) return { hpt: 32 };
+            if (row === headerRow) return { hpt: 22 };
+            return { hpt: 19 };
+        });
+        sheet['!cols'] = headers.map(function (header, column) {
+            var maxLength = String(header).length;
+            data.forEach(function (row) { maxLength = Math.max(maxLength, String(row[column] || '').length); });
+            return { wch: Math.min(Math.max(maxLength + 2, 12), 42) };
+        });
+        var book = XLSX.utils.book_new();
+        book.Props = { Title: title, Subject: description || 'Reporte TEC Tracker', Author: 'TEC Tracker', CreatedDate: new Date() };
+        XLSX.utils.book_append_sheet(book, sheet, 'Reporte');
+        XLSX.writeFile(book, fileName(title, 'xlsx'), { compression: true });
+    }
+
+    function exportPdf(title, description, context, headers, data, count) {
+        var Pdf = window.jspdf.jsPDF;
+        var pdf = new Pdf({ orientation: headers.length > 5 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+        var pageWidth = pdf.internal.pageSize.getWidth();
+        var generated = new Date().toLocaleString('es-CO');
+        var headerHeight = context ? 38 : 30;
+        var tableStartY = context ? 44 : 36;
+        pdf.setProperties({ title: title, subject: description || 'Reporte TEC Tracker', creator: 'TEC Tracker' });
+        pdf.autoTable({
+            head: [headers],
+            body: data,
+            startY: tableStartY,
+            margin: { top: tableStartY, right: 12, bottom: 16, left: 12 },
+            theme: 'striped',
+            styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5, overflow: 'linebreak', valign: 'middle', textColor: [51, 65, 85], lineColor: [226, 232, 240], lineWidth: 0.15 },
+            headStyles: { fillColor: [109, 95, 185], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 247, 252] },
+            didDrawPage: function () {
+                pdf.setFillColor(109, 95, 185);
+                pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(13);
+                pdf.text(title, 12, 10);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(8);
+                var details = pdf.splitTextToSize(description || 'Reporte TEC Tracker', pageWidth - 24);
+                pdf.text(details.slice(0, 1), 12, 16);
+                if (context) {
+                    pdf.setTextColor(255, 255, 255);
+                    pdf.text(pdf.splitTextToSize(context, pageWidth - 24).slice(0, 2), 12, 23);
+                }
+                pdf.setTextColor(226, 232, 240);
+                pdf.text('Generado: ' + generated + ' | Registros exportados: ' + count, 12, context ? 33 : 25);
+            }
+        });
+        var pageCount = pdf.internal.getNumberOfPages();
+        for (var page = 1; page <= pageCount; page++) {
+            pdf.setPage(page);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(8);
+            pdf.setTextColor(100, 116, 139);
+            pdf.text('TEC Tracker', 12, pdf.internal.pageSize.getHeight() - 7);
+            pdf.text('Página ' + page + ' de ' + pageCount, pageWidth - 12, pdf.internal.pageSize.getHeight() - 7, { align: 'right' });
+        }
+        pdf.save(fileName(title, 'pdf'));
+    }
+
     function initialize(root) {
         if (root.dataset.initialized) return;
         root.dataset.initialized = 'true';
         var table = root.querySelector('table');
+        if (!table) return;
         var rows = Array.from(table.querySelectorAll('[data-table-row]'));
         var search = document.getElementById(table.id + '_search');
         var size = document.getElementById(table.id + '_size');
@@ -87,38 +201,26 @@
                 if (!selected.length) { status.textContent = 'No hay registros para exportar.'; return; }
                 var columns = Array.from(selected[0].children).map(function (cell, index) { return cell.dataset.searchable === 'true' ? index : -1; }).filter(function (index) { return index >= 0; });
                 var headers = Array.from(table.querySelectorAll('thead th'));
-                var values = [columns.map(function (index) { return headers[index].textContent.trim(); })].concat(selected.map(function (row) {
-                    return columns.map(function (index) { return row.children[index].textContent.trim(); });
-                }));
+                var columnNames = columns.map(function (index) { return headers[index].textContent.trim(); });
+                var values = selected.map(function (row) { return columns.map(function (index) { return row.children[index].textContent.trim(); }); });
+                var title = root.dataset.exportTitle || table.querySelector('caption').textContent.trim() || 'Reporte TEC Tracker';
+                var descriptionElement = root.querySelector('header p');
+                var description = root.dataset.exportSubtitle || (descriptionElement ? descriptionElement.textContent.trim() : 'Resultados de la consulta');
+                var context = root.dataset.exportContext || '';
                 button.disabled = true;
-                status.textContent = 'Preparando exportación…';
+                button.setAttribute('aria-busy', 'true');
+                status.textContent = 'Preparando archivo…';
                 try {
                     await loadExportLibrary(button.dataset.export);
-                    if (button.dataset.export === 'excel') {
-                        var book = XLSX.utils.book_new();
-                        XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet(values), 'Reporte');
-                        XLSX.writeFile(book, 'reporte.xlsx');
-                    } else {
-                        var pdf = new window.jspdf.jsPDF({ orientation: 'landscape' });
-                        var title = table.querySelector('caption').textContent.trim();
-                        var y = 20;
-                        pdf.setFontSize(14);
-                        pdf.text(title, 14, y);
-                        pdf.setFontSize(9);
-                        y += 12;
-                        values.forEach(function (row) {
-                            var lines = pdf.splitTextToSize(row.join(' | '), 265);
-                            lines.forEach(function (line) {
-                                if (y > 190) { pdf.addPage(); y = 20; }
-                                pdf.text(line, 14, y); y += 5;
-                            });
-                            y += 3;
-                        });
-                        pdf.save('reporte.pdf');
-                    }
-                    status.textContent = 'Exportación preparada.';
-                } catch (error) { status.textContent = 'No se pudo exportar. Inténtalo nuevamente.'; }
-                finally { button.disabled = false; }
+                    if (button.dataset.export === 'excel') exportExcel(title, description, context, columnNames, values, values.length);
+                    else exportPdf(title, description, context, columnNames, values, values.length);
+                    status.textContent = 'Archivo descargado correctamente.';
+                } catch (error) {
+                    status.textContent = 'No se pudo generar el archivo. Comprueba tu conexión e inténtalo nuevamente.';
+                } finally {
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                }
             });
         });
         render();
@@ -128,4 +230,3 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeAll);
     else initializeAll();
 })();
-
