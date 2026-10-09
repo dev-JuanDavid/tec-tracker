@@ -8,6 +8,13 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var groups = (ViewBag.idgruoup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).Select(g => new SelectListItem { Value = g.Value, Text = g.Value == Guid.Empty.ToString() ? "Todos los grupos" : g.Text }).ToList();
     var activities = Model.activities.OrderByDescending(a => a.time).ToList();
+    var totalHours = activities.Sum(a => a.time);
+    var topApplication = activities.FirstOrDefault();
+    var hasValidQuery = Model.from.Year > 1900 && Model.to.Year > 1900 && ViewData.ModelState.IsValid;
+    var culture = System.Globalization.CultureInfo.GetCultureInfo("es-CO");
+    var selectedGroup = groups.Where(g => g.Value == Model.idgruoup.ToString()).Select(g => g.Text).FirstOrDefault() ?? "Todos los grupos";
+    var employees = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var selectedEmployee = string.IsNullOrWhiteSpace(Model.user) ? "Todos los empleados" : employees.Where(u => u.Value == Model.user).Select(u => u.Text).FirstOrDefault() ?? Model.user;
     var form = new FormComponent {
         Id = "activity-summary-form", Title = "Consultar tiempos", Description = "Selecciona el período y el equipo para consultar el tiempo acumulado por programa.",
         ActionUrl = Url.Action("TimePerActivity", "Operation"), SubmitLabel = "Consultar reporte",
@@ -21,19 +28,32 @@
     var table = TableComponent.From(activities,
         new TableColumn<ActivitySumViewModel> { Title = "Programa", Cell = activity => TableCell.Text(activity.program) },
         new TableColumn<ActivitySumViewModel> { Title = "Tiempo acumulado", Cell = activity => TableCell.Text(FormatHours(activity.time)) },
-        new TableColumn<ActivitySumViewModel> { Title = "Participación", Cell = activity => TableCell.Text(activities.Sum(a => a.time) > 0 ? (activity.time * 100 / activities.Sum(a => a.time)).ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %" : "0 %") });
+        new TableColumn<ActivitySumViewModel> { Title = "Participación", Cell = activity => TableCell.Text(totalHours > 0 ? (activity.time * 100 / totalHours).ToString("0.##", culture) + " %" : "—") });
     table.Title = "Tiempo por programa";
-    table.Description = "Programas ordenados por su tiempo acumulado de uso.";
+    table.Description = "Tiempo de actividad registrado por programa, ordenado de mayor a menor.";
     table.EmptyMessage = "No hay actividades para los filtros seleccionados.";
-    var json = Json.Encode(activities.Select(a => new { name = a.program, minutes = Math.Round(a.time * 60, 2) })).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
+    var json = Json.Encode(activities.Take(10).Select(a => new { name = a.program, minutes = Math.Round(a.time * 60, 3) })).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
 }
 <div class="space-y-6">
     <header><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Resumen de tiempos</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Sumado de actividades</h1><p class="mt-2 text-sm text-slate-500">Compara el tiempo utilizado en cada programa durante el período seleccionado.</p></header>
     @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "activity-summary-chart", Title = "Distribución del tiempo", Description = "Participación de los programas en el tiempo registrado." })
-        <div class="min-w-0 xl:col-span-2">@Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)</div>
-    </div>
+    @if (!hasValidQuery)
+    {
+        <p class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600" role="status">@(Model.from.Year <= 1900 ? "Selecciona un período para consultar el tiempo acumulado por programa." : "Corrige los filtros para consultar el reporte.")</p>
+    }
+    else
+    {
+        <p class="text-sm text-slate-600"><strong>Período:</strong> @Model.from.ToString("d", culture) – @Model.to.ToString("d", culture) <span class="mx-2 text-slate-300">|</span><strong>Grupo:</strong> @selectedGroup <span class="mx-2 text-slate-300">|</span><strong>Empleado:</strong> @selectedEmployee</p>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Tiempo de actividad registrado", Value = FormatHours(totalHours), Description = "Suma del tiempo de actividad del período" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Programas con actividad", Value = activities.Count.ToString("N0", culture), Description = "Programas con duración registrada mayor que cero" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Programa con mayor tiempo", Value = topApplication == null ? "—" : topApplication.program, Description = topApplication == null ? "Sin actividad en los filtros seleccionados" : FormatHours(topApplication.time) + " registrados" })
+        </div>
+        <div class="space-y-6">
+            @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "activity-summary-chart", Title = "Programas con mayor tiempo registrado", Description = "Los diez programas con mayor duración. La unidad de la gráfica es minutos; la tabla incluye todos los programas." })
+            @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
+        </div>
+    }
 </div>
 @section Scripts {
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@5.3.6/dist/apexcharts.min.js"></script>
@@ -42,29 +62,52 @@
     var data = @Html.Raw(json);
     var target = document.getElementById('activity-summary-chart');
     var status = document.getElementById('activity-summary-chart_status');
-    if (!data.length) { target.classList.add('hidden'); status.textContent = 'Consulta un período con actividad para mostrar la distribución.'; }
-    else if (!window.ApexCharts) { status.textContent = 'No se pudo cargar la gráfica. Consulta los tiempos en la tabla.'; }
-    else new ApexCharts(target, {
-        chart: { type: 'donut', height: 360, toolbar: { show: false }, fontFamily: 'inherit' },
-        series: data.map(function (row) { return Number(row.minutes); }),
-        labels: data.map(function (row) { return row.name; }),
-        colors: ['#6d5fb9', '#8b7dce', '#a89ddd', '#4c7998', '#63a89a', '#cda768', '#d28699'],
-        legend: { show: false }, dataLabels: { enabled: false },
-        plotOptions: { pie: { donut: { size: '72%' } } },
-        tooltip: { y: { formatter: function (minutes) { var rounded = Math.round(minutes); return Math.floor(rounded / 60) + ' h ' + (rounded % 60) + ' min'; } } }
-    }).render().catch(function () { status.textContent = 'No se pudo mostrar la gráfica.'; });
+    if (target && !data.length) { target.classList.add('hidden'); status.textContent = 'No hay actividad registrada para mostrar en la gráfica.'; }
+    else if (target && !window.ApexCharts) { status.textContent = 'No se pudo cargar la gráfica. Consulta todos los tiempos en la tabla.'; }
+    else if (target) new ApexCharts(target, {
+        chart: { type: 'bar', height: Math.max(320, data.length * 38 + 90), toolbar: { show: false }, fontFamily: 'inherit' },
+        series: [{ name: 'Tiempo registrado', data: data.map(function (row) { return { x: row.name, y: Number(row.minutes) }; }) }],
+        colors: ['#6d5fb9'], plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '62%' } },
+        dataLabels: { enabled: false },
+        xaxis: { min: 0, title: { text: 'Minutos registrados' }, labels: { formatter: function (minutes) { return Number(minutes).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' min'; } } },
+        yaxis: { labels: { maxWidth: 230, formatter: function (name) { name = String(name || ''); return name.length > 32 ? name.slice(0, 29) + '…' : name; } } },
+        grid: { borderColor: '#f1f5f9' },
+        tooltip: { y: { formatter: function (minutes) { var seconds = Math.round(Number(minutes) * 60); var hours = Math.floor(seconds / 3600); var remaining = seconds % 3600; var mins = Math.floor(remaining / 60); var secs = remaining % 60; return (hours ? hours + ' h ' : '') + mins + ' min ' + secs + ' s'; } } },
+        noData: { text: 'Sin datos' }
+    }).render().catch(function () { status.textContent = 'No se pudo mostrar la gráfica. Consulta todos los tiempos en la tabla.'; });
     var from = document.getElementById('from');
     var to = document.getElementById('to');
-    function validate() { to.setCustomValidity(from.value > to.value ? 'La fecha final debe ser igual o posterior a la inicial.' : ''); }
-    from.addEventListener('input', validate);
-    to.addEventListener('input', validate);
+    var form = document.getElementById('activity-summary-form');
+    function validate(event) {
+        if (!from || !to) return true;
+        var message = '';
+        if (from.value > to.value) message = 'La fecha final debe ser igual o posterior a la fecha inicial.';
+        else if (from.value && to.value) {
+            var startParts = from.value.split('-').map(Number);
+            var endParts = to.value.split('-').map(Number);
+            var start = Date.UTC(startParts[0], startParts[1] - 1, startParts[2]);
+            var end = Date.UTC(endParts[0], endParts[1] - 1, endParts[2]);
+            if ((end - start) / 86400000 > 366) message = 'El período no puede superar 367 días.';
+        }
+        to.setCustomValidity(message);
+        if (message && event) { event.preventDefault(); to.reportValidity(); }
+        return !message;
+    }
+    if (form) form.addEventListener('submit', function (event) { validate(event); });
+    if (from) from.addEventListener('input', function () { validate(); });
+    if (to) to.addEventListener('input', function () { validate(); });
 })();
 </script>
 }
 @functions {
     string FormatHours(double hours) {
-        var minutes = (long)Math.Round(hours * 60);
-        return string.Format("{0} h {1} min", minutes / 60, minutes % 60);
+        var seconds = (long)Math.Round(hours * 3600);
+        var totalHours = seconds / 3600;
+        var minutes = (seconds % 3600) / 60;
+        var remainingSeconds = seconds % 60;
+        if (totalHours > 0) return string.Format("{0} h {1} min", totalHours, minutes);
+        if (minutes > 0) return string.Format("{0} min {1} s", minutes, remainingSeconds);
+        return string.Format("{0} s", remainingSeconds);
     }
 }
 

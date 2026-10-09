@@ -13,6 +13,10 @@
         new SelectInput { Name = "idgroup", Label = "Grupo", Options = groups, Value = Model.idgroup, EmptyLabel = null },
         new SelectInput { Name = "ddlUsers", Label = "Empleado", Options = users, Value = Model.ddlUsers, EmptyLabel = "Todos los empleados" }
     };
+    var selectedGroup = groups.Where(g => g.Value == Model.idgroup.ToString()).Select(g => g.Text).FirstOrDefault() ?? "Todos los grupos";
+    var selectedEmployee = string.IsNullOrWhiteSpace(Model.ddlUsers) ? "Todos los empleados" :
+        users.Where(u => u.Value == Model.ddlUsers).Select(u => u.Text).FirstOrDefault() ?? Model.ddlUsers;
+    var culture = System.Globalization.CultureInfo.GetCultureInfo("es-CO");
     var detail = TableComponent.From(Model.DataPerUser.OrderByDescending(u => u.TotalHours),
         new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Empleado", Cell = u => TableCell.Text(u.User) },
         new TableColumn<Queue.Models.BasicStatsDashboard> { Title = "Tiempo total", Cell = u => TableCell.Text(FormatTime(u.TotalHours)) },
@@ -23,26 +27,37 @@
     detail.Title = "Detalle por empleado";
     detail.Description = "Tiempo registrado durante el período seleccionado.";
     detail.EmptyMessage = "No hay actividad de empleados para estos filtros.";
+    var hasRecordedTime = Model.RegisteredSeconds > 0;
     var metrics = new[] {
-        new MetricComponent { Label = "Actividad productiva", Value = Model.resume.ProductiveTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Del tiempo registrado" },
-        new MetricComponent { Label = "Actividad improductiva", Value = Model.resume.ImproductiveTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Del tiempo registrado" },
-        new MetricComponent { Label = "Actividad neutral", Value = Model.resume.NeutralTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Del tiempo registrado" },
-        new MetricComponent { Label = "Sin clasificar", Value = Model.resume.UnclasifyTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %", Description = "Pendiente de clasificación" }
+        new MetricComponent { Label = "Tiempo registrado", Value = FormatTime(Model.RegisteredSeconds / 3600), Description = "Suma de actividad reportada en el período" },
+        new MetricComponent { Label = "Aplicaciones utilizadas", Value = Model.ApplicationCount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-CO")), Description = "Aplicaciones distintas con registros" },
+        new MetricComponent { Label = "Clasificación productiva", Value = hasRecordedTime ? Model.resume.ProductiveTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %" : "—", Description = hasRecordedTime ? "Del tiempo registrado" : "Sin tiempo registrado para calcular participación" },
+        new MetricComponent { Label = "Clasificación improductiva", Value = hasRecordedTime ? Model.resume.ImproductiveTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %" : "—", Description = hasRecordedTime ? "Del tiempo registrado" : "Sin tiempo registrado para calcular participación" },
+        new MetricComponent { Label = "Clasificación neutral", Value = hasRecordedTime ? Model.resume.NeutralTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %" : "—", Description = hasRecordedTime ? "Del tiempo registrado" : "Sin tiempo registrado para calcular participación" },
+        new MetricComponent { Label = "Sin clasificar", Value = hasRecordedTime ? Model.resume.UnclasifyTime.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %" : "—", Description = hasRecordedTime ? "Del tiempo registrado" : "Sin tiempo registrado para calcular participación" }
     };
-    var graphJson = Json.Encode(Model.graph).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
+    var graphJson = Json.Encode(Model.ApplicationUsage).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
+    var dailyJson = Json.Encode(Model.ActivityPerDay).Replace("<", "\\u003c").Replace(">", "\\u003e").Replace("&", "\\u0026");
     var resumeJson = Json.Encode(new[] { Model.resume.ProductiveTime, Model.resume.ImproductiveTime, Model.resume.NeutralTime, Model.resume.UnclasifyTime });
 }
 <div id="dashboard" class="space-y-6">
     <header class="flex flex-wrap items-center justify-between gap-4">
-        <div><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Resumen del equipo</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Panel de actividad</h1><p class="mt-2 text-sm text-slate-500">Explora cómo se distribuye el tiempo de trabajo de tu empresa.</p></div>
-        <button id="dashboard-print" type="button" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20">Imprimir o guardar PDF</button>
+        <div><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Resumen del equipo</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Panel de actividad</h1><p class="mt-2 text-sm text-slate-500">Explora cómo se distribuye el tiempo de trabajo de tu empresa.</p>
+            <p class="mt-2 text-sm text-slate-600"><strong>Período:</strong> @Model.DateFrom.ToString("d", culture) – @Model.DateTo.ToString("d", culture) <span class="mx-2 text-slate-300">|</span><strong>Grupo:</strong> @selectedGroup <span class="mx-2 text-slate-300">|</span><strong>Empleado:</strong> @selectedEmployee</p>
+            <p class="hidden print-only mt-1 text-xs text-slate-500">Generado el @DateTime.Now.ToString("g", culture)</p>
+        </div>
+        <div class="print-hide flex flex-col items-end gap-1">
+            <button id="dashboard-print" type="button" disabled class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20 disabled:cursor-wait disabled:opacity-60">Preparando impresión…</button>
+            <p id="print-status" class="text-xs text-slate-500" role="status" aria-live="polite">Preparando las gráficas para imprimir.</p>
+        </div>
     </header>
     @if (ViewBag.restdaysmsg != null)
     {
         <p class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800" role="status">@ViewBag.restdaysmsg</p>
     }
-    <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+    <section id="dashboard-filters-panel" class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
         <h2 class="mb-5 text-sm font-semibold text-slate-800">Filtrar actividad</h2>
+        @if (!ViewData.ModelState.IsValid) { <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" role="alert">@Html.ValidationSummary(false)</div> }
         <form id="dashboard-filters" action="@Url.Action("Index", "Home")" method="get">
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
                 @foreach (var input in filters) { @Html.Partial("~/Views/Shared/Components/Inputs/_Field.cshtml", input, new ViewDataDictionary(ViewData)) }
@@ -53,47 +68,100 @@
             </div>
         </form>
     </section>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @foreach (var metric in metrics) { @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", metric) }
     </div>
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div class="min-w-0 xl:col-span-2">@Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "applications-chart", Title = "Aplicaciones más usadas", Description = "Las cinco aplicaciones con mayor participación en el tiempo registrado." })</div>
-        @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "activity-chart", Title = "Distribución de actividad", Description = "Participación por clasificación del tiempo." })
+    <div id="dashboard-charts" class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "daily-activity-chart", Title = "Actividad por día", Description = "Tiempo registrado por clasificación. Los días sin registros aparecen en cero." })
+        @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "applications-chart", Title = "Tiempo por aplicación", Description = "Las diez aplicaciones con mayor duración acumulada en el período." })
     </div>
     @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", detail)
 </div>
 @section Scripts {
+<style>
+    @@media print {
+        @@page { size: landscape; margin: 12mm; }
+        html, body { width: 100% !important; height: auto !important; min-height: 0 !important; overflow: visible !important; background: #fff !important; }
+        body { display: block !important; color: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body > #sidebar-backdrop, body > #sidebar, body > dialog, body > #globalModal { display: none !important; }
+        body > div.flex-1.flex.flex-col.min-w-0 { display: block !important; width: 100% !important; min-width: 0 !important; overflow: visible !important; }
+        body > div.flex-1.flex.flex-col.min-w-0 > .app-header,
+        body > div.flex-1.flex.flex-col.min-w-0 > footer { display: none !important; }
+        body > div.flex-1.flex.flex-col.min-w-0 > main { display: block !important; height: auto !important; min-height: 0 !important; overflow: visible !important; padding: 0 !important; background: #fff !important; }
+        .print-hide, #dashboard-filters-panel, #filter-status { display: none !important; }
+        .print-only { display: block !important; }
+        #dashboard { display: block !important; width: 100% !important; margin: 0 !important; color: #1e293b !important; font-size: 9pt !important; }
+        #dashboard > header { display: block !important; margin-bottom: 5mm !important; padding-bottom: 4mm !important; border-bottom: 1px solid #cbd5e1 !important; }
+        #dashboard > header h1 { margin-top: 1mm !important; font-size: 21pt !important; }
+        #dashboard > header p { margin-top: 1.5mm !important; color: #475569 !important; }
+        #dashboard > .grid { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 3mm !important; margin-bottom: 5mm !important; }
+        #dashboard > .grid > article { break-inside: avoid !important; page-break-inside: avoid !important; padding: 3mm !important; border: 1px solid #cbd5e1 !important; border-radius: 2mm !important; box-shadow: none !important; }
+        #dashboard > .grid > article > div:first-child { height: 1mm !important; margin-bottom: 2mm !important; }
+        #dashboard > .grid > article h2 { font-size: 8pt !important; }
+        #dashboard > .grid > article p:nth-of-type(1) { margin-top: 1mm !important; font-size: 17pt !important; }
+        #dashboard > .grid > article p:nth-of-type(2) { margin-top: 1mm !important; font-size: 7pt !important; }
+        #dashboard-charts { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4mm !important; }
+        #dashboard-charts > section { break-inside: avoid !important; page-break-inside: avoid !important; padding: 4mm !important; border: 1px solid #cbd5e1 !important; border-radius: 2mm !important; box-shadow: none !important; }
+        #dashboard-charts > section h2 { font-size: 11pt !important; }
+        #dashboard-charts > section > div[id$="-chart"] { min-height: 0 !important; height: 92mm !important; margin-top: 2mm !important; }
+        #dashboard-charts .apexcharts-canvas, #dashboard-charts .apexcharts-svg { max-width: 100% !important; height: 90mm !important; }
+        #dashboard > section[data-component-table] { margin-top: 5mm !important; overflow: visible !important; border: 1px solid #cbd5e1 !important; border-radius: 2mm !important; box-shadow: none !important; break-inside: auto !important; }
+        #dashboard > section[data-component-table] > header { padding: 3mm !important; border-bottom: 1px solid #cbd5e1 !important; }
+        #dashboard > section[data-component-table] > header h1 { font-size: 12pt !important; }
+        #dashboard > section[data-component-table] > header p { margin-top: 1mm !important; font-size: 8pt !important; }
+        #dashboard > section[data-component-table] > div.max-w-sm,
+        #dashboard > section[data-component-table] > footer { display: none !important; }
+        #dashboard > section[data-component-table] > div.overflow-x-auto { overflow: visible !important; }
+        #dashboard > section[data-component-table] table { width: 100% !important; font-size: 8pt !important; border-collapse: collapse !important; }
+        #dashboard > section[data-component-table] th,
+        #dashboard > section[data-component-table] td { padding: 2mm !important; border-bottom: 1px solid #e2e8f0 !important; color: #334155 !important; }
+        #dashboard > section[data-component-table] th { background: #f1f5f9 !important; }
+        #dashboard > section[data-component-table] [data-table-row][hidden] { display: table-row !important; }
+        #dashboard > section[data-component-table] [data-table-empty] { display: none !important; }
+        a { color: inherit !important; text-decoration: none !important; }
+        * { box-shadow: none !important; text-shadow: none !important; }
+    }
+</style>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@5.3.6/dist/apexcharts.min.js"></script>
 <script>
 (function () {
     'use strict';
     var apps = @Html.Raw(graphJson);
+    var days = @Html.Raw(dailyJson);
     var activity = @Html.Raw(resumeJson);
-    var labels = ['Productivo', 'Improductivo', 'Neutral', 'Sin clasificar'];
-    var percentage = function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 2 }) + ' %'; };
+    var labels = ['Clasificación productiva', 'Clasificación improductiva', 'Clasificación neutral', 'Sin clasificar'];
+    var chartPromises = [];
     function showChart(id, options, hasData) {
         var status = document.getElementById(id + '_status');
-        if (!hasData) { document.getElementById(id).classList.add('hidden'); status.textContent = 'No hay actividad para el período seleccionado.'; return; }
-        if (!window.ApexCharts) { status.textContent = 'No se pudo cargar la gráfica. Los datos siguen disponibles en el resumen.'; return; }
-        new ApexCharts(document.getElementById(id), options).render().catch(function () { status.textContent = 'No se pudo mostrar la gráfica.'; });
+        if (!hasData) { document.getElementById(id).classList.add('hidden'); status.textContent = 'No hay tiempo registrado para el período seleccionado.'; chartPromises.push(Promise.resolve()); return; }
+        if (!window.ApexCharts) { status.textContent = 'No se pudo cargar la gráfica. Los datos siguen disponibles en el resumen y el detalle.'; chartPromises.push(Promise.resolve()); return; }
+        chartPromises.push(new ApexCharts(document.getElementById(id), options).render().catch(function () { status.textContent = 'No se pudo mostrar la gráfica. Consulta el detalle disponible.'; }));
     }
     showChart('applications-chart', {
         chart: { type: 'bar', height: 340, toolbar: { show: false }, fontFamily: 'inherit' },
-        series: [{ name: 'Uso', data: apps.map(function (a) { return { x: a.element, y: Number(a.decimalvalue) }; }) }],
+        series: [{ name: 'Tiempo registrado', data: apps.map(function (a) { return { x: a.Application, y: Number(a.Seconds / 3600) }; }) }],
         colors: ['#6d5fb9'], plotOptions: { bar: { horizontal: true, borderRadius: 5, barHeight: '55%' } },
-        dataLabels: { enabled: true, formatter: percentage },
-        xaxis: { min: 0, max: 100, labels: { formatter: percentage } },
-        grid: { borderColor: '#f1f5f9' }, tooltip: { y: { formatter: percentage } },
+        dataLabels: { enabled: false },
+        xaxis: { min: 0, title: { text: 'Horas registradas' }, labels: { formatter: function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' h'; } } },
+        grid: { borderColor: '#f1f5f9' }, tooltip: { y: { formatter: function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 2 }) + ' horas'; } } },
         noData: { text: 'Sin datos' }
     }, apps.length > 0);
-    showChart('activity-chart', {
-        chart: { type: 'donut', height: 340, toolbar: { show: false }, fontFamily: 'inherit' },
-        series: activity.map(Number), labels: labels,
+    showChart('daily-activity-chart', {
+        chart: { type: 'bar', height: 340, stacked: true, toolbar: { show: false }, fontFamily: 'inherit' },
+        series: [
+            { name: labels[0], data: days.map(function (d) { return Number(d.ProductiveSeconds / 3600); }) },
+            { name: labels[1], data: days.map(function (d) { return Number(d.ImproductiveSeconds / 3600); }) },
+            { name: labels[2], data: days.map(function (d) { return Number(d.NeutralSeconds / 3600); }) },
+            { name: labels[3], data: days.map(function (d) { return Number(d.UnclassifiedSeconds / 3600); }) }
+        ],
         colors: ['#6d5fb9', '#e87979', '#94a3b8', '#f0bd62'],
-        legend: { position: 'bottom' }, stroke: { width: 3 },
-        dataLabels: { enabled: false }, tooltip: { y: { formatter: percentage } },
-        plotOptions: { pie: { donut: { size: '72%' } } }, noData: { text: 'Sin datos' }
-    }, activity.some(function (value) { return Number(value) > 0; }));
+        plotOptions: { bar: { borderRadius: 3, columnWidth: '58%' } },
+        xaxis: { categories: days.map(function (d) { return d.Date; }), labels: { rotate: -35, hideOverlappingLabels: true } },
+        yaxis: { title: { text: 'Horas registradas' }, labels: { formatter: function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 1 }) + ' h'; } } },
+        legend: { position: 'bottom' }, grid: { borderColor: '#f1f5f9' },
+        tooltip: { y: { formatter: function (value) { return Number(value).toLocaleString('es-CO', { maximumFractionDigits: 2 }) + ' horas'; } } },
+        noData: { text: 'Sin datos' }
+    }, days.length > 0 && activity.some(function (value) { return Number(value) > 0; }));
     var group = document.getElementById('idgroup');
     var employee = document.getElementById('ddlUsers');
     var status = document.getElementById('filter-status');
@@ -132,7 +200,17 @@
     });
     document.getElementById('DateTo').addEventListener('input', function () { this.setCustomValidity(''); });
     document.getElementById('DateFrom').addEventListener('input', function () { document.getElementById('DateTo').setCustomValidity(''); });
-    document.getElementById('dashboard-print').addEventListener('click', function () { window.print(); });
+    var printButton = document.getElementById('dashboard-print');
+    var printStatus = document.getElementById('print-status');
+    Promise.all(chartPromises).then(function () {
+        printButton.disabled = false;
+        printButton.textContent = 'Imprimir o guardar PDF';
+        printStatus.textContent = 'Se incluirán todos los registros de la tabla.';
+    });
+    printButton.addEventListener('click', function () {
+        printStatus.textContent = 'En el diálogo de impresión, selecciona “Guardar como PDF” para descargar el reporte.';
+        window.print();
+    });
 })();
 </script>
 }

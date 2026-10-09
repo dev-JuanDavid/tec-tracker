@@ -6,14 +6,43 @@
     ViewBag.Title = "Equipos con el programa instalado";
     ViewBag.NavTitle = ViewBag.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var table = TableComponent.From(Model ?? Enumerable.Empty<SoftwareReport>(),
-        new TableColumn<SoftwareReport> { Title = "Programa", Cell = software => TableCell.Text(software.program) },
-        new TableColumn<SoftwareReport> { Title = "Equipo", Cell = software => TableCell.Text(software.agrupation) });
+    var records = (Model ?? Enumerable.Empty<SoftwareReport>()).ToList();
+    var program = ViewBag.SoftwareProgram as string ?? Request["name"] ?? "Programa";
+    var error = ViewBag.SoftwareReportError as string;
+    var deviceCount = ViewBag.SoftwareDeviceCount == null ? 0 : (int)ViewBag.SoftwareDeviceCount;
+    var group = ViewBag.SoftwareGroup as Guid?;
+    var selectedUser = ViewBag.SoftwareUser as string;
+    var groups = ViewBag.idgroup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var groupName = group.HasValue && group.Value != Guid.Empty
+        ? groups.Where(item => item.Value == group.Value.ToString()).Select(item => item.Text).FirstOrDefault() ?? "Grupo seleccionado"
+        : "Todos los grupos";
+    var employeeName = string.IsNullOrWhiteSpace(selectedUser) || selectedUser == Guid.Empty.ToString() ? "Todos los empleados" : selectedUser;
+    var table = TableComponent.From(records,
+        new TableColumn<SoftwareReport> { Title = "Equipo", Cell = software => TableCell.Text(string.IsNullOrWhiteSpace(software.agrupation) ? "Sin equipo" : software.agrupation) },
+        new TableColumn<SoftwareReport> { Title = "Usuario", Cell = software => TableCell.Text(string.IsNullOrWhiteSpace(software.user) ? "Sin usuario" : software.user) },
+        new TableColumn<SoftwareReport> { Title = "Versión", Cell = software => TableCell.Text(string.IsNullOrWhiteSpace(software.version) ? "Sin versión" : software.version) },
+        new TableColumn<SoftwareReport> { Title = "Fecha de instalación", Cell = software => TableCell.Text(software.instalationday.HasValue ? software.instalationday.Value.ToString("d", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) : "Sin fecha") });
     table.Title = "Equipos con el programa instalado";
-    table.Description = "Programa: " + Request["name"] + ". Las exportaciones incluyen todos los resultados de la búsqueda.";
+    table.Description = "Programa: " + program + ". Cada fila corresponde a un registro activo del inventario. Las exportaciones incluyen todos los resultados.";
+    table.ExportTitle = "Detalle de software instalado";
+    table.ExportSubtitle = "Equipos registrados para el programa seleccionado.";
+    table.ExportContext = "Programa: " + program + " | Grupo: " + groupName + " | Empleado: " + employeeName;
     table.EmptyMessage = "No hay equipos para el programa y los filtros seleccionados.";
     table.EnableExport = true;
-    table.Actions.Add(TableCell.Link("Volver al reporte", Url.Action("SoftwareReport", "Operation", new { idgroup = Request["idgroup"], user = Request["user"] })));
+    table.Actions.Add(TableCell.Link("Volver al reporte", Url.Action("SoftwareReport", "Operation", new { idgroup = group, user = selectedUser })));
 }
-@Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
-
+<div class="space-y-6">
+    <header><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Detalle de inventario</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">@program</h1><p class="mt-2 text-sm text-slate-500">Equipos y usuarios donde aparece instalado el programa.</p></header>
+    @if (!string.IsNullOrWhiteSpace(error))
+    {
+        <p class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" role="alert">@error</p>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Instalaciones activas", Value = records.Count.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-CO")), Description = "Registros de este programa y sus filtros" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Equipos", Value = deviceCount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-CO")), Description = "Equipos distintos con el programa" })
+        </div>
+        @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
+    }
+</div>

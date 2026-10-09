@@ -684,7 +684,7 @@ namespace Queue.Controllers
                                    User = e.UserName,
                                    Application = e.Application,
                                    Time = e.Activity,
-                                   Date_ = e.Date
+                                   Date_ = e.FocusTime
                                }).ToList();
 
 
@@ -1580,48 +1580,53 @@ namespace Queue.Controllers
         {
             List<SoftwareReport> srlist = new List<SoftwareReport>();
             Guid IdCompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
+            var deviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            ViewBag.HasSoftwareReportQuery = Request.QueryString["idgroup"] != null || Request.QueryString["user"] != null;
 
             if (IdCompany != Guid.Empty)
             {
-                // Validamos si se seleccionó grupo o usuario
-                if (!string.IsNullOrEmpty(user) || idgroup != null)
+                if (ViewBag.HasSoftwareReportQuery)
                 {
-                    MongoHelper.SoftWareList = MongoHelper.database.GetCollection<InstalledProgramsViewModel>("Software");
-                    var builder = Builders<InstalledProgramsViewModel>.Filter;
-
-                    // Filtro base: por empresa y activos
-                    var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) & builder.Eq(x => x.Status, true);
-                    List<InstalledProgramsViewModel> results = MongoHelper.SoftWareList.Find(filter).ToList();
-
-                    // ✅ Si se seleccionó un grupo
-                    if (idgroup != null && idgroup != Guid.Empty)
+                    try
                     {
-                        List<Agent_Employee> users_ = _repositorio.ListUsuarioArea(IdCompany, idgroup.Value);
+                        MongoHelper.SoftWareList = MongoHelper.database.GetCollection<InstalledProgramsViewModel>("Software");
+                        var builder = Builders<InstalledProgramsViewModel>.Filter;
+                        var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) & builder.Eq(x => x.Status, true);
+                        List<InstalledProgramsViewModel> results = MongoHelper.SoftWareList.Find(filter).ToList();
 
-                        // Normalizamos todos los usuarios a minúsculas
-                        List<string> _users = users_.Select(s => s.Usuario.ToLower()).ToList();
-
-                        results = results.Where(u => _users.Contains(u.User.ToLower())).ToList();
-                    }
-
-                    // ✅ Si se seleccionó un usuario específico
-                    if (!string.IsNullOrEmpty(user) && user != Guid.Empty.ToString())
-                    {
-                        var usuarioNormalizado = user.ToLower();
-                        results = results.Where(u => u.User.ToLower() == usuarioNormalizado).ToList();
-                    }
-
-                    // Agrupar programas
-                    foreach (var i in results.GroupBy(g => g.Name))
-                    {
-                        srlist.Add(new SoftwareReport
+                        if (idgroup.HasValue && idgroup.Value != Guid.Empty)
                         {
-                            program = i.Key,
-                            quantity = i.Count()
-                        });
+                            var groupUsers = new HashSet<string>(
+                                _repositorio.ListUsuarioArea(IdCompany, idgroup.Value)
+                                    .Where(employee => !string.IsNullOrWhiteSpace(employee.Usuario))
+                                    .Select(employee => employee.Usuario.Trim()),
+                                StringComparer.OrdinalIgnoreCase);
+                            results = results.Where(item => !string.IsNullOrWhiteSpace(item.User) && groupUsers.Contains(item.User.Trim())).ToList();
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(user) && !string.Equals(user, Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            results = results.Where(item => !string.IsNullOrWhiteSpace(item.User) &&
+                                string.Equals(item.User.Trim(), user.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                        }
+
+                        deviceNames = new HashSet<string>(results.Where(item => !string.IsNullOrWhiteSpace(item.Pc))
+                            .Select(item => item.Pc.Trim()), StringComparer.OrdinalIgnoreCase);
+
+                        srlist = results.Where(item => !string.IsNullOrWhiteSpace(item.Name))
+                            .GroupBy(item => item.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+                            .Select(group => new SoftwareReport { program = group.First().Name.Trim(), quantity = group.Count() })
+                            .OrderBy(item => item.program, StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Trace.TraceError("No se pudo consultar el reporte de software: {0}", ex);
+                        ViewBag.SoftwareReportError = "No se pudo consultar el inventario de software. Intenta nuevamente.";
                     }
                 }
             }
+            ViewBag.SoftwareDeviceCount = deviceNames.Count;
 
             // Lista de grupos
             List<SelectListItem> sli = CreateList(
@@ -1684,47 +1689,58 @@ namespace Queue.Controllers
         public ActionResult SoftwareReportDetails(string name, Guid? idgroup, string user)
 
         {
-            
             List<SoftwareReport> srlist = new List<SoftwareReport>();
             Guid IdCompany = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
+            ViewBag.SoftwareProgram = name;
+            ViewBag.SoftwareGroup = idgroup;
+            ViewBag.SoftwareUser = user;
+            ViewBag.SoftwareDeviceCount = 0;
 
-            if (IdCompany != Guid.Empty )
+            if (IdCompany != Guid.Empty && !string.IsNullOrWhiteSpace(name))
             {
-                
-
-                MongoHelper.SoftWareList = MongoHelper.database.GetCollection<InstalledProgramsViewModel>("Software");
-                var builder = Builders<InstalledProgramsViewModel>.Filter;
-                var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) &
-                             builder.Eq(x => x.Status, true) &
-                             builder.Eq("Name", name);
-
-                List<InstalledProgramsViewModel> results = MongoHelper.SoftWareList.Find(filter).ToList();
-
-                if (idgroup != null && idgroup != Guid.Empty)
+                try
                 {
-                    List<Agent_Employee> users_ = _repositorio.ListUsuarioArea(IdCompany, idgroup.Value);
-                    List<string> _users = users_.Select(s => s.Usuario.Trim().ToLower()).ToList();
+                    MongoHelper.SoftWareList = MongoHelper.database.GetCollection<InstalledProgramsViewModel>("Software");
+                    var builder = Builders<InstalledProgramsViewModel>.Filter;
+                    var filter = builder.Eq(x => x.IdCompany, IdCompany.ToString()) &
+                                 builder.Eq(x => x.Status, true) &
+                                 builder.Regex(x => x.Name, new MongoDB.Bson.BsonRegularExpression(
+                                     "^" + System.Text.RegularExpressions.Regex.Escape(name.Trim()) + "$", "i"));
 
-                    results = results
-                        .Where(u => u.User != null && _users.Contains(u.User.Trim().ToLower()))
-                        .ToList();
-                }
+                    List<InstalledProgramsViewModel> results = MongoHelper.SoftWareList.Find(filter).ToList();
 
-                if (!string.IsNullOrEmpty(user))
-                {
-                    var usuarioNormalizado = user.Trim().ToLower();
-                    results = results
-                        .Where(u => u.User != null && u.User.Trim().ToLower() == usuarioNormalizado)
-                        .ToList();
-                }
-
-                    foreach (var i in results.Where(g => g.Name == name))
-                {
-                    srlist.Add(new SoftwareReport
+                    if (idgroup.HasValue && idgroup.Value != Guid.Empty)
                     {
-                        program = i.Name,
-                        agrupation = i.Pc
-                    });
+                        var groupUsers = new HashSet<string>(
+                            _repositorio.ListUsuarioArea(IdCompany, idgroup.Value)
+                                .Where(employee => !string.IsNullOrWhiteSpace(employee.Usuario))
+                                .Select(employee => employee.Usuario.Trim()),
+                            StringComparer.OrdinalIgnoreCase);
+                        results = results.Where(item => !string.IsNullOrWhiteSpace(item.User) && groupUsers.Contains(item.User.Trim())).ToList();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(user) && !string.Equals(user, Guid.Empty.ToString(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        results = results.Where(item => !string.IsNullOrWhiteSpace(item.User) &&
+                            string.Equals(item.User.Trim(), user.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+
+                    srlist = results.Select(item => new SoftwareReport
+                    {
+                        program = item.Name,
+                        agrupation = item.Pc,
+                        user = item.User,
+                        version = item.Vertion,
+                        instalationday = item.InstalledDate
+                    }).OrderBy(item => item.agrupation, StringComparer.OrdinalIgnoreCase).ToList();
+                    ViewBag.SoftwareDeviceCount = new HashSet<string>(
+                        results.Where(item => !string.IsNullOrWhiteSpace(item.Pc)).Select(item => item.Pc.Trim()),
+                        StringComparer.OrdinalIgnoreCase).Count;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.TraceError("No se pudo consultar el detalle del reporte de software: {0}", ex);
+                    ViewBag.SoftwareReportError = "No se pudo consultar el detalle del inventario de software. Intenta nuevamente.";
                 }
             }
 
@@ -1742,7 +1758,7 @@ namespace Queue.Controllers
             sle.Insert(0, new SelectListItem { Text = "Seleccione", Value = Guid.Empty.ToString() });
             ViewBag.user = sle;
 
-            return View(srlist.Distinct());
+            return View(srlist);
         }
 
 
@@ -2094,6 +2110,188 @@ namespace Queue.Controllers
 
 
         [HttpGet]
+        public ActionResult ActivityTrend()
+        {
+            Guid company = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
+            var model = new ActivityTrendViewModel { From = DateTime.Today.AddDays(-6), To = DateTime.Today };
+            PopulateActivityTrendFilters(company, model);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult ActivityTrend(ActivityTrendViewModel model)
+        {
+            Guid company = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
+            model = model ?? new ActivityTrendViewModel();
+            model.HasQuery = true;
+
+            if (model.From.Year <= 1900)
+                ModelState.AddModelError("From", "Selecciona la fecha inicial del período.");
+            if (model.To.Year <= 1900)
+                ModelState.AddModelError("To", "Selecciona la fecha final del período.");
+            if (model.From.Year > 1900 && model.To.Year > 1900)
+            {
+                if (model.From.Date > model.To.Date)
+                    ModelState.AddModelError("To", "La fecha final debe ser igual o posterior a la inicial.");
+                else if ((model.To.Date - model.From.Date).TotalDays >= 92)
+                    ModelState.AddModelError("To", "El período no puede superar 92 días.");
+            }
+
+            if (ModelState.IsValid)
+            {
+                int periodDays = (model.To.Date - model.From.Date).Days + 1;
+                model.PreviousTo = model.From.Date.AddDays(-1);
+                model.PreviousFrom = model.PreviousTo.AddDays(-(periodDays - 1));
+
+                List<BasicStatsDashboard> currentData = GetDataForDashBoard(company.ToString(), model.From, model.To, model.User, model.GroupId);
+                List<BasicStatsDashboard> previousData = GetDataForDashBoard(company.ToString(), model.PreviousFrom, model.PreviousTo, model.User, model.GroupId);
+
+                model.Current = BuildActivityTrendSummary(currentData, model.From, model.To);
+                model.Previous = BuildActivityTrendSummary(previousData, model.PreviousFrom, model.PreviousTo);
+                model.Classifications = BuildActivityTrendClassifications(currentData, previousData);
+                model.Applications = BuildActivityTrendApplications(currentData, previousData);
+                model.Employees = BuildActivityTrendEmployees(currentData, previousData);
+                model.Days = BuildActivityTrendDays(currentData, previousData, model.From, model.PreviousFrom, periodDays);
+            }
+
+            PopulateActivityTrendFilters(company, model);
+            return View(model);
+        }
+
+        private void PopulateActivityTrendFilters(Guid company, ActivityTrendViewModel model)
+        {
+            if (model.GroupId != Guid.Empty)
+                EmployeeSelectList(model.GroupId);
+
+            List<SelectListItem> groups = CreateList(
+                db.Agent_EmployeesGroups.Where(group => group.Agent_Empresa.IdCompany == company).ToList(),
+                "idemployeesGroup", "Nombre", model.GroupId);
+            groups.Insert(0, new SelectListItem { Text = "Todos los grupos", Value = Guid.Empty.ToString() });
+            ViewBag.idgruoup = groups;
+        }
+
+        private static ActivityTrendPeriodSummary BuildActivityTrendSummary(List<BasicStatsDashboard> data, DateTime from, DateTime to)
+        {
+            data = data ?? new List<BasicStatsDashboard>();
+            int periodDays = (to.Date - from.Date).Days + 1;
+            int daysWithRecords = data.Select(item => item.Date_.Date).Distinct().Count();
+            return new ActivityTrendPeriodSummary
+            {
+                TotalSeconds = data.Sum(item => item.Time ?? 0),
+                ProductiveSeconds = data.Where(item => item.Clasification == 1).Sum(item => item.Time ?? 0),
+                ImproductiveSeconds = data.Where(item => item.Clasification == 2).Sum(item => item.Time ?? 0),
+                NeutralSeconds = data.Where(item => item.Clasification == 3).Sum(item => item.Time ?? 0),
+                UnclassifiedSeconds = data.Where(item => item.Clasification == 0).Sum(item => item.Time ?? 0),
+                DaysWithRecords = daysWithRecords,
+                DaysWithoutRecords = Math.Max(0, periodDays - daysWithRecords)
+            };
+        }
+
+        private static List<ActivityTrendClassification> BuildActivityTrendClassifications(List<BasicStatsDashboard> current, List<BasicStatsDashboard> previous)
+        {
+            var definitions = new[] { new { Id = 1, Name = "Productivo" }, new { Id = 2, Name = "Improductivo" }, new { Id = 3, Name = "Neutral" }, new { Id = 0, Name = "Sin clasificar" } };
+            return definitions.Select(definition =>
+            {
+                double currentSeconds = current.Where(item => item.Clasification == definition.Id).Sum(item => item.Time ?? 0);
+                double previousSeconds = previous.Where(item => item.Clasification == definition.Id).Sum(item => item.Time ?? 0);
+                return new ActivityTrendClassification
+                {
+                    Name = definition.Name,
+                    CurrentSeconds = currentSeconds,
+                    PreviousSeconds = previousSeconds,
+                    DeltaSeconds = currentSeconds - previousSeconds
+                };
+            }).ToList();
+        }
+
+        private static List<ActivityTrendApplication> BuildActivityTrendApplications(List<BasicStatsDashboard> current, List<BasicStatsDashboard> previous)
+        {
+            var currentTotals = current.Where(item => !string.IsNullOrWhiteSpace(item.Application))
+                .GroupBy(item => item.Application.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Time ?? 0), StringComparer.OrdinalIgnoreCase);
+            var previousTotals = previous.Where(item => !string.IsNullOrWhiteSpace(item.Application))
+                .GroupBy(item => item.Application.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Time ?? 0), StringComparer.OrdinalIgnoreCase);
+
+            return currentTotals.Keys.Concat(previousTotals.Keys).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(application =>
+                {
+                    double currentSeconds = currentTotals.ContainsKey(application) ? currentTotals[application] : 0;
+                    double previousSeconds = previousTotals.ContainsKey(application) ? previousTotals[application] : 0;
+                    return new ActivityTrendApplication
+                    {
+                        Application = application,
+                        CurrentSeconds = currentSeconds,
+                        PreviousSeconds = previousSeconds,
+                        DeltaSeconds = currentSeconds - previousSeconds
+                    };
+                })
+                .OrderByDescending(item => Math.Max(item.CurrentSeconds, item.PreviousSeconds))
+                .ThenBy(item => item.Application, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static List<ActivityTrendEmployee> BuildActivityTrendEmployees(List<BasicStatsDashboard> current, List<BasicStatsDashboard> previous)
+        {
+            var currentTotals = current.Where(item => !string.IsNullOrWhiteSpace(item.User))
+                .GroupBy(item => item.User.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Time ?? 0), StringComparer.OrdinalIgnoreCase);
+            var previousTotals = previous.Where(item => !string.IsNullOrWhiteSpace(item.User))
+                .GroupBy(item => item.User.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Sum(item => item.Time ?? 0), StringComparer.OrdinalIgnoreCase);
+
+            return currentTotals.Keys.Concat(previousTotals.Keys).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(user =>
+                {
+                    double currentSeconds = currentTotals.ContainsKey(user) ? currentTotals[user] : 0;
+                    double previousSeconds = previousTotals.ContainsKey(user) ? previousTotals[user] : 0;
+                    return new ActivityTrendEmployee
+                    {
+                        User = user,
+                        CurrentSeconds = currentSeconds,
+                        PreviousSeconds = previousSeconds,
+                        DeltaSeconds = currentSeconds - previousSeconds
+                    };
+                })
+                .OrderByDescending(item => Math.Max(item.CurrentSeconds, item.PreviousSeconds))
+                .ThenBy(item => item.User, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static List<ActivityTrendDay> BuildActivityTrendDays(List<BasicStatsDashboard> current, List<BasicStatsDashboard> previous, DateTime currentFrom, DateTime previousFrom, int periodDays)
+        {
+            var currentByDate = current.GroupBy(item => item.Date_.Date).ToDictionary(group => group.Key, group => group.ToList());
+            var previousByDate = previous.GroupBy(item => item.Date_.Date).ToDictionary(group => group.Key, group => group.ToList());
+            var days = new List<ActivityTrendDay>();
+
+            for (int offset = 0; offset < periodDays; offset++)
+            {
+                var currentDate = currentFrom.Date.AddDays(offset);
+                var previousDate = previousFrom.Date.AddDays(offset);
+                List<BasicStatsDashboard> currentRecords;
+                List<BasicStatsDashboard> previousRecords;
+                bool currentHasRecords = currentByDate.TryGetValue(currentDate, out currentRecords);
+                bool previousHasRecords = previousByDate.TryGetValue(previousDate, out previousRecords);
+                double currentSeconds = currentHasRecords ? currentRecords.Sum(item => item.Time ?? 0) : 0;
+                double previousSeconds = previousHasRecords ? previousRecords.Sum(item => item.Time ?? 0) : 0;
+
+                days.Add(new ActivityTrendDay
+                {
+                    CurrentDate = currentDate,
+                    PreviousDate = previousDate,
+                    CurrentSeconds = currentSeconds,
+                    PreviousSeconds = previousSeconds,
+                    CurrentHasRecords = currentHasRecords,
+                    PreviousHasRecords = previousHasRecords,
+                    DeltaSeconds = currentSeconds - previousSeconds
+                });
+            }
+
+            return days;
+        }
+
+        [HttpGet]
         public ActionResult TimePerActivity()
         {
             Guid company = Guid.Parse(Request.RequestContext.HttpContext.Session["Company"].ToString());
@@ -2126,34 +2324,25 @@ namespace Queue.Controllers
 
             if (activity.from.Date > activity.to.Date)
                 ModelState.AddModelError("to", "La fecha final debe ser igual o posterior a la inicial.");
+            else if ((activity.to.Date - activity.from.Date).TotalDays > 366)
+                ModelState.AddModelError("to", "El período no puede superar 367 días.");
             List<BasicStatsDashboard> data = ModelState.IsValid ? GetDataForDashBoard(company.ToString(), activity.from, activity.to, activity.user, activity.idgruoup) : new List<BasicStatsDashboard>();
             TimePerActivityViewModel datos = new TimePerActivityViewModel();
             datos.from = activity.from;
             datos.to = activity.to;
             datos.user = activity.user;
             datos.idgruoup = activity.idgruoup;
-            if (data.Count() > 0)
-            {
-                foreach (var i in data.GroupBy(g => g.Application))
+            datos.activities = data
+                .Where(item => !string.IsNullOrWhiteSpace(item.Application))
+                .GroupBy(item => item.Application.Trim(), StringComparer.OrdinalIgnoreCase)
+                .Select(group => new ActivitySumViewModel
                 {
-                    ActivitySumViewModel activities = new ActivitySumViewModel();
-
-                    activities.program = i.Key;
-                    double times = data.Where(b => b.Application == i.Key).Sum(k => k.Time).Value;
-
-                    //sacamos minutos
-                    times = times / 60;
-
-                    //sacamos hotas
-                    times = times / 60;
-
-                    activities.time = times;
-
-                    if (times > 0.01)
-                        datos.activities.Add(activities);
-                }
-            }
-            datos.activities = datos.activities.OrderByDescending(o => o.time).ToList();
+                    program = group.First().Application.Trim(),
+                    time = group.Sum(item => item.Time ?? 0) / 3600d
+                })
+                .Where(item => item.time > 0)
+                .OrderByDescending(item => item.time)
+                .ToList();
 
             //List<SelectListItem> sliu = CreateList(db.Agent_Employee.Where(u => u.IdCompany == company), "Usuario", "Usuario", activity.user).ToList();
             //sliu.Insert(0, (new SelectListItem { Text = "Seleccione", Value = Guid.Empty.ToString() }));

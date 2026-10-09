@@ -24,309 +24,289 @@
     <section class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-slate-800">Seleccionar empleado</h2>
         <p class="mt-1 text-sm text-slate-500">Consulta el reporte y selecciona un empleado para mostrar su actividad.</p>
-        <div id="userList" class="mt-5 flex max-h-40 flex-wrap gap-2 overflow-y-auto" aria-label="Empleados del reporte"></div>
+        <div id="userList" class="mt-5 flex max-h-40 flex-wrap gap-2 overflow-y-auto" role="group" aria-label="Empleados del reporte"></div>
+        <p id="userListEmpty" class="mt-4 text-sm text-slate-500" role="status">Consulta un día para cargar los empleados con registros.</p>
         <div class="mt-6 flex flex-wrap gap-4 border-t border-slate-100 pt-5 text-xs font-medium text-slate-600">
             <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[#55cbcd]" aria-hidden="true"></span>Productiva</span>
             <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[#ff968a]" aria-hidden="true"></span>Improductiva</span>
             <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[#8FA2AD]" aria-hidden="true"></span>Neutral</span>
-            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[#445a67]" aria-hidden="true"></span>Inactiva</span>
+            <span class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-[#f0bd62]" aria-hidden="true"></span>Sin clasificar</span>
         </div>
+        <p class="mt-3 text-xs text-slate-500">Los espacios sin barras indican que no hay intervalos registrados; no significan por sí solos que el empleado estuviera inactivo.</p>
     </section>
     <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
         <p id="chartEmptyMessage" class="px-4 py-3 text-sm text-slate-500" role="status">Selecciona un empleado para ver su línea de tiempo.</p>
         <p id="divWait" class="hidden px-4 py-3 text-sm text-[#6d5fb9]" role="status">Cargando actividades…</p>
-        <p id="sin_Data" class="hidden px-4 py-3 text-sm text-slate-500" role="status">No hay actividades disponibles.</p>
+        <div id="interval-summary" class="hidden mx-4 mb-4 grid grid-cols-1 gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-3" aria-live="polite">
+            <p><span class="block text-xs text-slate-500">Empleado seleccionado</span><strong id="summary-user" class="text-sm text-slate-800"></strong></p>
+            <p><span class="block text-xs text-slate-500">Intervalos registrados</span><strong id="summary-intervals" class="text-sm text-slate-800"></strong></p>
+            <p><span class="block text-xs text-slate-500">Actividad / inactividad registrada</span><strong id="summary-durations" class="text-sm text-slate-800"></strong></p>
+        </div>
         <div id="chartContainer" class="max-h-[550px] overflow-auto">
             @Html.Partial("~/Views/Shared/Components/Charts/_Chart.cshtml", new ChartComponent { Id = "chart", Title = "Línea de tiempo", Description = "Aplicaciones y períodos de actividad del empleado seleccionado." })
         </div>
+        <p class="px-4 pb-2 text-xs text-slate-500">La hora se presenta según la configuración horaria del servidor.</p>
     </div>
 </div>
 @section Scripts {
 <script src="@Url.Content("~/Scripts/jquery-3.4.1.min.js")"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@5.3.6/dist/apexcharts.min.js"></script>
 <script>
-    const PER_ROW_PX = 30;
-    document.querySelector("#activity-report-form button[type=submit]").id = "btnProcesarConsulta";
+    var PER_ROW_PX = 34;
     var globalData = [];
     var chart = null;
+    var activeRequest = null;
+    var requestButton = document.querySelector("#activity-report-form button[type=submit]");
+    requestButton.id = "btnProcesarConsulta";
 
-    $(document).ready(function () {
-
-
-        // Bind del botón Buscar
-        $("#activity-report-form").off("submit").on("submit", function (e) {
-            e.preventDefault();
+    $(function () {
+        $("#activity-report-form").on("submit", function (event) {
+            event.preventDefault();
             ReportGantt();
         });
-
-        // Opcional: si quieres precargar datos al abrir la página, descomenta:
         ReportGantt();
     });
 
     function ReportGantt() {
+        var date = $("#DateFrom").val();
+        if (!date) {
+            setMessage("Selecciona una fecha para consultar la actividad.");
+            return;
+        }
+        if (activeRequest) activeRequest.abort();
         var params = {
-            dateFrom: $("#DateFrom").val(),
-            dateTo: $("#DateFrom").val(),
+            dateFrom: date,
+            dateTo: date,
             periods: $("#ddlPeriods").val(),
             user: [],
             idgruoup: $("#idgruoup").val()
         };
 
-        $("#divWait").removeClass("hidden");
-        $("#sin_Data").addClass("hidden");
+        globalData = [];
+        renderUserList([]);
+        clearChart();
+        $("#interval-summary").addClass("hidden");
         $("#chartEmptyMessage").addClass("hidden");
-        if (chart) { chart.destroy(); chart = null; }
-        $("#chart").empty();
-        $("#btnProcesarConsulta").prop("disabled", true);
+        $("#divWait").removeClass("hidden");
+        requestButton.disabled = true;
+        requestButton.textContent = "Consultando…";
 
-        $.ajax({
+        var request = $.ajax({
             type: "POST",
             url: '@Url.Action("NewChart", "ReportGantt")',
             data: JSON.stringify(params),
             contentType: "application/json; charset=utf-8",
             success: function (data) {
-
-                if (!data || !data.length) {
-                    $("#sin_Data").removeClass("hidden");
-                    globalData = [];
-                    renderUserList([]);
-                    renderFilteredChart([]);
-                    $("#chartEmptyMessage").text("No hay actividades para los filtros seleccionados.");
+                if (!Array.isArray(data) || !data.length) {
+                    setMessage("No hay actividad registrada para esta fecha y grupo.");
+                    setUserListMessage("No se encontraron empleados con registros para los filtros seleccionados.");
                     return;
                 }
-
                 globalData = data;
-                drawChart(data);
+                renderUserList(data);
+                setUserListMessage("Selecciona un empleado para mostrar sus intervalos.");
+                setMessage("Selecciona un empleado para ver su línea de tiempo.");
             },
-            error: function (err) {
-                console.error("Error al obtener datos:", err);
-                $("#sin_Data").removeClass("hidden");
-                globalData = [];
-                renderUserList([]);
-                renderFilteredChart([]);
-                $("#chartEmptyMessage").text("No se pudo cargar el reporte. Intenta consultar nuevamente.");
+            error: function (xhr, status) {
+                if (status === "abort") return;
+                setMessage(xhr.status === 400
+                    ? "Revisa la fecha y el intervalo seleccionados."
+                    : "No se pudo cargar el reporte. Verifica tu conexión e inténtalo nuevamente.");
+                setUserListMessage("No se pudieron cargar los empleados.");
             },
             complete: function () {
+                if (activeRequest !== request) return;
+                activeRequest = null;
                 $("#divWait").addClass("hidden");
-                $("#btnProcesarConsulta").prop("disabled", false);
+                requestButton.disabled = false;
+                requestButton.textContent = "Consultar reporte";
             }
         });
-    }
-
-    function drawChart(data) {
-        $("#chartEmptyMessage").text("Selecciona un empleado para ver su línea de tiempo.");
-        renderUserList(data);
-        renderFilteredChart([]);
+        activeRequest = request;
     }
 
     function renderUserList(data) {
-        var $container = $("#userList");
-        $container.empty();
-
-        for (var i = 0; i < data.length; i++) {
-            var userData = data[i];
-            var displayName = userData.UserName || userData.userName || ("Usuario " + (i + 1));
-            var userId = "userChip_" + i;
-
-            // inner HTML del chip (SVG check + label)
-            var inner = '<svg class="chip-check hidden w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20 6L9 17L4 12" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-                        '<span class="chip-label">' + escapeHtml(displayName) + '</span>';
-
-            var $btn = $("<button>")
-                .attr("type", "button")
-                .attr("aria-pressed", "false")
-                .attr("id", userId)
-                .attr("data-user", displayName)
-                .addClass("userChip flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-700 hover:brightness-95 transition")
-                .html(inner);
-
-            $container.append($btn);
-        }
-
-        // Click handler: selección única (toggle si clicas mismo)
-        $(".userChip").off("click").on("click", function () {
-            var $this = $(this);
-            var wasActive = $this.hasClass("active");
-
-            // Resetear todos
-            $(".userChip").attr("aria-pressed", "false")
-                .removeClass("active bg-[#6d5fb9] text-white")
-                .addClass("bg-slate-100 text-slate-700")
-                .find(".chip-check").addClass("hidden");
-
-            if (!wasActive) {
-                // Activar este
-                $this.attr("aria-pressed", "true").addClass("active bg-[#6d5fb9] text-white")
-                     .removeClass("bg-slate-100 text-slate-700")
-                     .find(".chip-check").removeClass("hidden");
-
-                var sel = $this.attr("data-user");
-                filterChartByUserName(sel);
-            } else {
-                // estaba activo y se desactiva -> limpiar gráfica
-                renderFilteredChart([]);
-            }
+        var $container = $("#userList").empty();
+        data.forEach(function (userData, index) {
+            var displayName = userData.UserName || userData.userName || ("Usuario " + (index + 1));
+            var $button = $("<button>")
+                .attr({ type: "button", "aria-pressed": "false", "data-user-index": index })
+                .addClass("userChip flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-[#6d5fb9]/10 focus:outline-none focus:ring-4 focus:ring-[#6d5fb9]/20")
+                .text(displayName);
+            $container.append($button);
+        });
+        setUserListMessage(data.length ? "Selecciona un empleado para mostrar sus intervalos." : "");
+        $container.find(".userChip").on("click", function () {
+            var selectedIndex = Number(this.getAttribute("data-user-index"));
+            var selected = globalData[selectedIndex];
+            $container.find(".userChip").attr("aria-pressed", "false")
+                .removeClass("bg-[#6d5fb9] text-white").addClass("bg-slate-100 text-slate-700");
+            $(this).attr("aria-pressed", "true")
+                .removeClass("bg-slate-100 text-slate-700").addClass("bg-[#6d5fb9] text-white");
+            renderFilteredChart(selected ? [selected] : []);
         });
     }
 
-    function filterChartByUserName(userName) {
-        if (!globalData || !globalData.length) {
-            renderFilteredChart([]);
+    function renderFilteredChart(users) {
+        clearChart();
+        $("#interval-summary").addClass("hidden");
+        if (!users.length) {
+            setMessage("Selecciona un empleado para ver su línea de tiempo.");
             return;
         }
-
-        // buscar coincidencia exacta (intenta varios campos)
-        var filtered = globalData.filter(function (u) {
-            return (u.UserName && u.UserName === userName) ||
-                   (u.userName && u.userName === userName) ||
-                   false;
-        });
-
-        if (!filtered.length) {
-            // intentamos contains por si hay sufijos/prefijos
-            filtered = globalData.filter(function (u) {
-                var n = (u.UserName || u.userName || "").toString();
-                return n.indexOf(userName) >= 0;
-            });
-        }
-
-        renderFilteredChart(filtered);
-    }
-
-    function renderFilteredChart(data) {
-        $("#sin_Data").addClass("hidden");
-
-        if (!data || !data.length) {
-            if (chart) {
-                try { chart.destroy(); } catch (e) { console.warn(e); }
-                chart = null;
-            }
-            $("#chart").empty();
-            $("#chartEmptyMessage").removeClass("hidden");
+        if (!window.ApexCharts) {
+            setMessage("No se pudo cargar la librería de gráficas. Recarga la página para reintentar.");
             return;
         }
-
-        $("#chartEmptyMessage").addClass("hidden");
 
         var seriesData = [];
         var totalRows = 0;
-
-        for (var i = 0; i < data.length; i++) {
-            var userData = data[i];
-            var userSeries = { name: userData.UserName || userData.userName, data: [] };
-
-            if (userData.ReportSytems && Array.isArray(userData.ReportSytems)) {
-                for (var j = 0; j < userData.ReportSytems.length; j++) {
-                    var app = userData.ReportSytems[j];
-                    var start = app.FocusTimeT ? new Date(app.FocusTimeT).getTime() : null;
-                    var end = app.DateEnd ? new Date(app.DateEnd).getTime() : null;
-                    if (start === null || end === null || isNaN(start) || isNaN(end)) continue;
-
-                    var label = String(app.Application || "Sin aplicación").trim();
-
-                    // construir tooltip HTML
-                    var tip = '<div class="p-2 bg-white rounded shadow-lg text-sm">' +
-                              '<b>Usuario:</b> ' + escapeHtml(userData.UserName || userData.userName) + '<br/>' +
-                              '<b>Aplicación:</b> ' + escapeHtml(app.ApplicationT || app.Application || "") + '<br/>' +
-                              '<b>Duración:</b> ' + escapeHtml(app.MessageDuration || "") + '<br/>' +
-                              (app.URL ? ('<b>URL:</b> ' + escapeHtml(app.URL) + '<br/>') : '') +
-                              '<b>Desde:</b> ' + moment(app.FocusTimeT).format('HH:mm:ss') + '<br/>' +
-                              '<b>Hasta:</b> ' + moment(app.DateEnd).format('HH:mm:ss') +
-                              '</div>';
-
-                    userSeries.data.push({
-                        x: label,
-                        y: [start, end],
-                        fillColor: getColor(app.GetAppsImproClassifyMoreUse),
-                        tooltip: { custom: (function(html){ return function(){ return html; }; })(tip) }
-                    });
-
-                    totalRows++;
-                }
-            }
-
+        var totalActivity = 0;
+        var totalInactivity = 0;
+        users.forEach(function (userData) {
+            var userName = userData.UserName || userData.userName || "Empleado";
+            var userSeries = { name: userName, data: [] };
+            (Array.isArray(userData.ReportSytems) ? userData.ReportSytems : []).forEach(function (app) {
+                var start = parseLocalTimestamp(app.FocusTimeT);
+                var end = parseLocalTimestamp(app.DateEnd);
+                if (start === null || end === null || end <= start) return;
+                var activity = Math.max(0, Number(app.Activity) || 0);
+                var inactivity = Math.max(0, Number(app.InActivity) || 0);
+                var point = {
+                    x: String(app.Application || "Sin aplicación").trim(),
+                    y: [start, end],
+                    fillColor: getColor(app.GetAppsImproClassifyMoreUse),
+                    customTooltip: buildTooltip(userName, app, start, end, activity, inactivity)
+                };
+                userSeries.data.push(point);
+                totalRows++;
+                totalActivity += activity;
+                totalInactivity += inactivity;
+            });
             if (userSeries.data.length) seriesData.push(userSeries);
-        }
+        });
 
         if (!seriesData.length) {
-            if (chart) { chart.destroy(); chart = null; }
-            $("#sin_Data").removeClass("hidden");
-            $("#chart").empty();
+            setMessage("Este empleado no tiene intervalos para mostrar en la fecha seleccionada.");
             return;
         }
 
-        var chartHeight = Math.max(300, totalRows * PER_ROW_PX + 120);
+        var dayBounds = getDayBounds($("#DateFrom").val());
+        $("#summary-user").text(seriesData[0].name);
+        $("#summary-intervals").text(totalRows.toLocaleString("es-CO"));
+        $("#summary-durations").text(formatDuration(totalActivity) + " / " + formatDuration(totalInactivity));
+        $("#interval-summary").removeClass("hidden");
+        $("#chartEmptyMessage").addClass("hidden");
 
-        if (chart) {
-            try { chart.destroy(); } catch (e) { console.warn(e); }
-            chart = null;
-        }
-
-
-        if (!window.ApexCharts) {
-            $("#sin_Data").text("No se pudo cargar la librería de gráficas. Recarga la página para reintentar.").removeClass("hidden");
-            return;
-        }
         chart = new ApexCharts(document.querySelector("#chart"), {
-            chart: { type: 'rangeBar', height: chartHeight, toolbar: { show: false }, fontFamily: 'inherit' },
-            plotOptions: {
-                bar: {
-                    horizontal: true,
-                    borderRadius: 6,
-                    barHeight: 20
-                }
+            chart: {
+                type: "rangeBar",
+                height: Math.max(320, totalRows * PER_ROW_PX + 115),
+                toolbar: { show: true, tools: { download: true, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true } },
+                zoom: { enabled: true, type: "x", autoScaleYaxis: true },
+                fontFamily: "inherit",
+                animations: { enabled: false }
             },
-            xaxis: { type: 'datetime', labels: { datetimeUTC: false, format: 'HH:mm' } },
-            yaxis: {
-                labels: {
-                    formatter: function (val) {
-                        val = String(val || "");
-                        return val.replace("Sin clasificar | ", "");
-                    }
-                }
+            plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: "62%" } },
+            colors: ["#6d5fb9"],
+            xaxis: {
+                type: "datetime", min: dayBounds.start, max: dayBounds.end,
+                labels: { datetimeUTC: false, format: "HH:mm" },
+                title: { text: "Hora del día" }
             },
+            yaxis: { labels: { maxWidth: 190, formatter: function (value) { return String(value || ""); } } },
+            grid: { borderColor: "#e2e8f0", xaxis: { lines: { show: true } } },
             tooltip: {
-                custom: function (opts) {
-                    try {
-                        return opts.w.config.series[opts.seriesIndex].data[opts.dataPointIndex].tooltip.custom();
-                    } catch (e) {
-                        return "";
-                    }
+                custom: function (options) {
+                    try { return options.w.config.series[options.seriesIndex].data[options.dataPointIndex].customTooltip || ""; }
+                    catch (error) { return ""; }
                 }
             },
             series: seriesData
         });
+        chart.render().catch(function () { setMessage("No se pudo mostrar la línea de tiempo. Intenta consultar nuevamente."); });
+    }
 
+    function clearChart() {
+        if (chart) {
+            try { chart.destroy(); } catch (error) { }
+            chart = null;
+        }
+        $("#chart").empty();
+    }
 
-        chart.render();
+    function setMessage(message) {
+        $("#chartEmptyMessage").text(message).removeClass("hidden");
+    }
+
+    function setUserListMessage(message) {
+        $("#userListEmpty").text(message).toggleClass("hidden", !message);
+    }
+
+    function getDayBounds(dateValue) {
+        var parts = String(dateValue || "").split("-").map(Number);
+        var start = new Date(parts[0], parts[1] - 1, parts[2]);
+        var end = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+        return { start: start.getTime(), end: end.getTime() };
+    }
+
+    function parseLocalTimestamp(value) {
+        var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+        if (!match) return null;
+        var date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6]));
+        return isNaN(date.getTime()) ? null : date.getTime();
+    }
+
+    function buildTooltip(userName, app, start, end, activity, inactivity) {
+        var details = Array.isArray(app.GroupApplication) ? app.GroupApplication : [];
+        var lines = details.map(function (item) {
+            var category = item.AppImproName || "Sin clasificar";
+            var application = item.Application || app.Application || "Sin aplicación";
+            var active = formatDuration(item.Activity);
+            var idle = formatDuration(item.InActivity);
+            return '<li class="flex justify-between gap-4 border-t border-slate-100 py-1"><span>' + escapeHtml(category + " · " + application) + '</span><span class="whitespace-nowrap">' + escapeHtml(active + " activo · " + idle + " inactivo") + '</span></li>';
+        }).join("");
+        return '<div class="min-w-[260px] max-w-md rounded-lg bg-white p-3 text-left text-xs text-slate-700 shadow-lg">' +
+            '<p class="font-semibold text-slate-900">' + escapeHtml(String(app.Application || "Sin aplicación")) + '</p>' +
+            '<p class="mt-1">' + escapeHtml(userName) + ' · ' + escapeHtml(formatClock(start)) + '–' + escapeHtml(formatClock(end)) + '</p>' +
+            '<p class="mt-1">Duración del intervalo: ' + escapeHtml(formatDuration((end - start) / 1000)) + '</p>' +
+            '<p>Actividad: ' + escapeHtml(formatDuration(activity)) + ' · Inactividad: ' + escapeHtml(formatDuration(inactivity)) + '</p>' +
+            (lines ? '<ul class="mt-2 max-h-40 overflow-y-auto">' + lines + '</ul>' : '') +
+            '</div>';
+    }
+
+    function formatClock(timestamp) {
+        return new Date(timestamp).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+    }
+
+    function formatDuration(seconds) {
+        var rounded = Math.max(0, Math.round(Number(seconds) || 0));
+        var hours = Math.floor(rounded / 3600);
+        var minutes = Math.floor((rounded % 3600) / 60);
+        var remainingSeconds = rounded % 60;
+        if (hours) return hours + " h " + minutes + " min";
+        if (minutes) return minutes + " min " + remainingSeconds + " s";
+        return remainingSeconds + " s";
     }
 
     function getColor(type) {
         switch (String(type)) {
-            case "1":
-            case "Productivo": return "#55cbcd";
-            case "2":
-            case "Improductivo": return "#ff968a";
-            case "0":
-            case "Neutro": return "#8FA2AD";
-            case "3":
-            case "Inactivo": return "#445a67";
-            default: return "#000000";
+            case "1": return "#55cbcd";
+            case "2": return "#ff968a";
+            case "3": return "#8FA2AD";
+            case "0": return "#f0bd62";
+            default: return "#94a3b8";
         }
     }
 
-    function escapeHtml(unsafe) {
-        if (unsafe === null || unsafe === undefined) return "";
-        return String(unsafe)
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
-
-
 </script>
 }
 

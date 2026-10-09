@@ -14668,6 +14668,7 @@
     <Content Include="Views\Operation\SoftwareReportDetails.cshtml" />
     <Content Include="Views\Operation\Alertas.cshtml" />
     <Content Include="Views\Operation\TimePerActivity.cshtml" />
+    <Content Include="Views\Operation\ActivityTrend.cshtml" />
     <Content Include="Views\Partial\_FileTransferReportData.cshtml" />
     <Content Include="Views\Partial\_Filters.cshtml" />
     <Content Include="Views\Reports\FileTransfer.cshtml" />

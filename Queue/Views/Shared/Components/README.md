@@ -56,7 +56,11 @@ El pie utiliza selector, rango/total y cuatro flechas. La búsqueda reinicia la 
 Las vistas solo configuran TableComponent: no deben inicializar DataTables ni duplicar scripts.
 Para tablas añadidas dinámicamente, llama a window.TecTables.initialize().
 EnableExport activa exportación a Excel y PDF. Se exportan los resultados de la búsqueda
-en todas las páginas, excluyendo las columnas de acciones. Las librerías se cargan al exportar.
+en todas las páginas, excluyendo las columnas de acciones. Excel incluye título, descripción,
+fecha de generación, cantidad de registros, autofiltro y anchos de columna ajustados. PDF usa
+una tabla paginada con encabezados repetidos, fecha, cantidad de registros y numeración de páginas.
+Las librerías se cargan al exportar. ExportTitle, ExportSubtitle y ExportContext permiten definir
+encabezado y filtros específicos del reporte sin cambiar el texto visible de la tabla.
 FormComponent.UseGet permite formularios de consulta GET sin token en la URL.
 SelectInput.DependsOn y OptionsUrl permiten cargar opciones desde GetUserByArea al cambiar un grupo.
 

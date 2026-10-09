@@ -8,27 +8,57 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var selectedGroup = Request["idgroup"];
     var selectedUser = Request["user"];
+    var hasQuery = ViewBag.HasSoftwareReportQuery != null && (bool)ViewBag.HasSoftwareReportQuery;
+    var error = ViewBag.SoftwareReportError as string;
+    var reportRows = (Model ?? Enumerable.Empty<SoftwareReport>()).ToList();
+    var culture = System.Globalization.CultureInfo.GetCultureInfo("es-CO");
     var groups = (ViewBag.idgroup as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>()).Select(g => new SelectListItem { Value = g.Value, Text = g.Value == Guid.Empty.ToString() ? "Todos los grupos" : g.Text }).ToList();
+    var employees = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var selectedGroupName = groups.Where(g => g.Value == selectedGroup).Select(g => g.Text).FirstOrDefault() ?? "Todos los grupos";
+    var selectedEmployeeName = string.IsNullOrWhiteSpace(selectedUser) || selectedUser == Guid.Empty.ToString()
+        ? "Todos los empleados"
+        : employees.Where(employee => employee.Value == selectedUser).Select(employee => employee.Text).FirstOrDefault() ?? selectedUser;
+    var installationCount = reportRows.Sum(software => software.quantity);
+    var deviceCount = ViewBag.SoftwareDeviceCount == null ? 0 : (int)ViewBag.SoftwareDeviceCount;
     var form = new FormComponent {
-        Id = "software-report-filters", Title = "Consultar programas instalados", Description = "Selecciona un grupo o empleado para consultar su software.",
+        Id = "software-report-filters", Title = "Consultar programas instalados", Description = "Filtra por grupo, empleado o consulta el inventario completo de la empresa.",
         ActionUrl = Url.Action("SoftwareReport", "Operation"), UseGet = true, SubmitLabel = "Consultar reporte",
         Inputs = new System.Collections.Generic.List<IFormInput> {
             new SelectInput { Name = "idgroup", Label = "Grupo", Options = groups, Value = selectedGroup ?? Guid.Empty.ToString(), EmptyLabel = null },
-            new SelectInput { Name = "user", Label = "Empleado", Options = ViewData["UserList"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>(), Value = selectedUser, EmptyLabel = "Todos los empleados", DependsOn = "idgroup", OptionsUrl = Url.Action("GetUserByArea", "Operation") }
+            new SelectInput { Name = "user", Label = "Empleado", Options = employees, Value = selectedUser, EmptyLabel = "Todos los empleados", DependsOn = "idgroup", OptionsUrl = Url.Action("GetUserByArea", "Operation") }
         }
     };
-    var table = TableComponent.From(Model ?? Enumerable.Empty<SoftwareReport>(),
+    var table = TableComponent.From(reportRows,
         new TableColumn<SoftwareReport> { Title = "Programa", Cell = software => TableCell.Text(software.program) },
         new TableColumn<SoftwareReport> { Title = "Cantidad de instalaciones", Cell = software => TableCell.Text(software.quantity) },
         new TableColumn<SoftwareReport> { Title = "Acciones", Cell = software => TableCell.Link("Ver equipos", Url.Action("SoftwareReportDetails", "Operation", new { name = software.program, idgroup = selectedGroup, user = selectedUser })) });
     table.Title = "Software instalado";
-    table.Description = "Las exportaciones incluyen los registros que coinciden con la búsqueda, de todas las páginas.";
+    table.Description = "Cantidad de instalaciones activas registradas en el inventario. No representa tiempo de uso de las aplicaciones.";
+    table.ExportTitle = "Reporte de software instalado";
+    table.ExportSubtitle = table.Description;
+    table.ExportContext = "Grupo: " + selectedGroupName + " | Empleado: " + selectedEmployeeName;
     table.EmptyMessage = "No hay programas para los filtros seleccionados.";
     table.EnableExport = true;
 }
 <div class="space-y-6">
-    <header><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Inventario de programas</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Reporte de software</h1><p class="mt-2 text-sm text-slate-500">Consulta los programas instalados y los equipos donde se utilizan.</p></header>
+    <header><p class="text-xs font-semibold uppercase tracking-widest text-[#6d5fb9]">Inventario de programas</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-800">Reporte de software</h1><p class="mt-2 text-sm text-slate-500">Consulta las instalaciones activas y los equipos donde están registradas.</p></header>
     @Html.Partial("~/Views/Shared/Components/Forms/_Form.cshtml", form, new ViewDataDictionary(ViewData))
-    @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
+    @if (!string.IsNullOrWhiteSpace(error))
+    {
+        <p class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" role="alert">@error</p>
+    }
+    else if (!hasQuery)
+    {
+        <p class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600" role="status">Selecciona los filtros que necesitas y pulsa «Consultar reporte» para ver el inventario de software.</p>
+    }
+    else
+    {
+        <p class="text-sm text-slate-600"><strong>Grupo:</strong> @selectedGroupName <span class="mx-2 text-slate-300">|</span><strong>Empleado:</strong> @selectedEmployeeName</p>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Instalaciones activas", Value = installationCount.ToString("N0", culture), Description = "Registros activos del inventario" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Programas", Value = reportRows.Count.ToString("N0", culture), Description = "Nombres de programa consolidados" })
+            @Html.Partial("~/Views/Shared/Components/Cards/_Metric.cshtml", new MetricComponent { Label = "Equipos", Value = deviceCount.ToString("N0", culture), Description = "Equipos distintos con software registrado" })
+        </div>
+        @Html.Partial("~/Views/Shared/Components/Tables/_Table.cshtml", table)
+    }
 </div>
-

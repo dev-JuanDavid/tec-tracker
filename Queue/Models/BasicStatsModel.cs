@@ -258,11 +258,12 @@ namespace Queue.Models
         public string program { get; set; }
         public int quantity { get; set; }
         public string agrupation { get; set; }
-        public DateTime instalationday { get; set; }
+        public DateTime? instalationday { get; set; }
         public DateTime uninstalday { get; set; }
 
         public Guid idgroup { get; set; }
         public string user { get; set; }
+        public string version { get; set; }
     }
 
     public class HardwareReport

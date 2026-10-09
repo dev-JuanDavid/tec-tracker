@@ -230,6 +230,9 @@ namespace Queue.Models.Components
         public int PageSize { get; set; } = 10;
         public string Title { get; set; }
         public string Description { get; set; }
+        public string ExportTitle { get; set; }
+        public string ExportSubtitle { get; set; }
+        public string ExportContext { get; set; }
         public string CreateUrl { get; set; }
         public string CreateLabel { get; set; } = "Nuevo registro";
         public IList<TableCell> Actions { get; set; } = new List<TableCell>();

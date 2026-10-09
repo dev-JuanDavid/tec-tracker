@@ -35,7 +35,7 @@ namespace Queue
             else if (controller.Equals("Home", StringComparison.OrdinalIgnoreCase) || controller.Equals("ReportGantt", StringComparison.OrdinalIgnoreCase))
                 allowed = AccessPolicy.CanReport(user);
             else if (controller.Equals("Operation", StringComparison.OrdinalIgnoreCase))
-                allowed = AccessPolicy.CanAdminister(user) || (AccessPolicy.CanReport(user) && new[] { "TimePerActivity", "SoftwareReport", "SoftwareReportDetails", "HardwareReport", "HardwareReportDetails", "GetUserByArea" }.Contains(action, StringComparer.OrdinalIgnoreCase));
+                allowed = AccessPolicy.CanAdminister(user) || (AccessPolicy.CanReport(user) && new[] { "TimePerActivity", "ActivityTrend", "SoftwareReport", "SoftwareReportDetails", "HardwareReport", "HardwareReportDetails", "GetUserByArea" }.Contains(action, StringComparer.OrdinalIgnoreCase));
             else allowed = AccessPolicy.CanAdminister(user);
             if (allowed) return;
             if (!user.Identity.IsAuthenticated) { context.Result = new HttpUnauthorizedResult(); return; }
